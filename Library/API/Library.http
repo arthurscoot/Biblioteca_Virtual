@@ -1,0 +1,7 @@
+@Library_HostAddress = http://localhost:5000
+
+
+# @name Get
+GET {{Library_HostAddress}}/api/autores/
+Accept: application/json
+
