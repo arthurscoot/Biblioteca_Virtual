@@ -4,7 +4,7 @@
 
 ## Este segmento reúne os modelos de JSON utilizados para criação das entidades do sistema de biblioteca.
 
-###👤 Usuário — Criação
+### 👤 Usuário — Criação
 {
   "nome": "",
   "cpf": "",
@@ -12,7 +12,7 @@
   "telefone": "00 (00) 00000-0000"
 }
 
-###✍️ Autor — Criação
+### ✍️ Autor — Criação
 {
   "nome": "",
   "dataNascimento": "0001-01-01",
@@ -20,7 +20,7 @@
   "biografia": ""
 }
 
-###📚 Livro — Criação
+### 📚 Livro — Criação
 {
   "titulo": "",
   "anoPublicacao": 0,
@@ -30,7 +30,7 @@
   "autorId": 0
 }
 
-###🔄 Empréstimo — Criação
+### 🔄 Empréstimo — Criação
 {
   "usuarioId": 0,
   "livroId": 0
