@@ -30,9 +30,10 @@ namespace Library.Data.Repositories
                 .ToListAsync();
         }
 
-        public async Task<Autor?> BuscarPorIdAsync(int id)
+        public async Task<Autor?> BuscarAtivoPorIdAsync(int id)
         {
-            return await _context.Autor.FindAsync(id);
+             return await _context.Autor
+        .FirstOrDefaultAsync(a => a.Id == id && a.Ativo);
         }
 
         public async Task<bool> ExisteAutorComMesmoNomeAsync(string nome)

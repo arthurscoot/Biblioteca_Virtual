@@ -1,4 +1,5 @@
 using AutoMapper;
+using Domain.Exceptions;
 using Library.DTOs;
 using Library.Entities;
 using Library.Interfaces;
@@ -56,7 +57,7 @@ namespace Library.Tests
             _mockRepository.Setup(r => r.ExisteCpfAsync(dto.Cpf)).ReturnsAsync(true);
 
             // Act & Assert
-            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.CriarAsync(dto));
+            var ex = await Assert.ThrowsAsync<BusinessException>(() => _service.CriarAsync(dto));
             Assert.Equal("Já existe um usuário cadastrado com este CPF.", ex.Message);
             _mockRepository.Verify(r => r.AddAsync(It.IsAny<Usuario>()), Times.Never);
         }
@@ -70,7 +71,7 @@ namespace Library.Tests
             _mockRepository.Setup(r => r.ExisteEmailAsync(dto.Email)).ReturnsAsync(true);
 
             // Act & Assert
-            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.CriarAsync(dto));
+            var ex = await Assert.ThrowsAsync<BusinessException>(() => _service.CriarAsync(dto));
             Assert.Equal("Já existe um usuário cadastrado com este e-mail.", ex.Message);
             _mockRepository.Verify(r => r.AddAsync(It.IsAny<Usuario>()), Times.Never);
         }
@@ -111,17 +112,14 @@ namespace Library.Tests
         }
 
         [Fact]
-        public async Task BuscarPorCpfAsync_DeveRetornarNull_QuandoNaoEncontrado()
+        public async Task BuscarPorCpfAsync_DeveLancarExcecao_QuandoNaoEncontrado()
         {
             // Arrange
             var cpf = "12345678900";
             _mockRepository.Setup(r => r.BuscarPorCpfAsync(cpf)).ReturnsAsync((Usuario?)null);
 
-            // Act
-            var result = await _service.BuscarPorCpfAsync(cpf);
-
-            // Assert
-            Assert.Null(result);
+            // Act & Assert
+            await Assert.ThrowsAsync<NotFoundException>(() => _service.BuscarPorCpfAsync(cpf));
         }
 
         [Fact]
@@ -137,28 +135,25 @@ namespace Library.Tests
             _mockRepository.Setup(r => r.ExisteEmailEmOutroUsuarioAsync(id, dto.Email)).ReturnsAsync(false);
 
             // Act
-            var result = await _service.AtualizarAsync(id, dto);
+            await _service.AtualizarAsync(id, dto);
 
             // Assert
-            Assert.True(result);
             Assert.Equal(dto.Nome, usuario.Nome);
             Assert.Equal(dto.Cpf, usuario.Cpf);
             _mockRepository.Verify(r => r.UpdateAsync(usuario), Times.Once);
         }
 
         [Fact]
-        public async Task AtualizarAsync_DeveRetornarFalse_QuandoUsuarioNaoEncontrado()
+        public async Task AtualizarAsync_DeveLancarExcecao_QuandoUsuarioNaoEncontrado()
         {
             // Arrange
             var id = 1;
             var dto = new CreateUsuarioDTO();
             _mockRepository.Setup(r => r.BuscarPorIdAsync(id)).ReturnsAsync((Usuario?)null);
 
-            // Act
-            var result = await _service.AtualizarAsync(id, dto);
-
-            // Assert
-            Assert.False(result);
+            // Act & Assert
+            await Assert.ThrowsAsync<NotFoundException>(() => _service.AtualizarAsync(id, dto));
+            
             _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<Usuario>()), Times.Never);
         }
 
@@ -174,7 +169,7 @@ namespace Library.Tests
             _mockRepository.Setup(r => r.ExisteCpfEmOutroUsuarioAsync(id, dto.Cpf)).ReturnsAsync(true);
 
             // Act & Assert
-            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.AtualizarAsync(id, dto));
+            var ex = await Assert.ThrowsAsync<BusinessException>(() => _service.AtualizarAsync(id, dto));
             Assert.Equal("O CPF informado já está em uso por outro usuário.", ex.Message);
         }
 
@@ -187,10 +182,9 @@ namespace Library.Tests
             _mockRepository.Setup(r => r.BuscarPorIdAsync(id)).ReturnsAsync(usuario);
 
             // Act
-            var result = await _service.DesativarAsync(id);
+            await _service.DesativarAsync(id);
 
             // Assert
-            Assert.True(result);
             Assert.False(usuario.Ativo);
             _mockRepository.Verify(r => r.UpdateAsync(usuario), Times.Once);
         }

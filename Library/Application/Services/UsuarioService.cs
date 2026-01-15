@@ -1,4 +1,5 @@
 using AutoMapper;
+using Domain.Exceptions;
 using Library.DTOs;
 using Library.Entities;
 using Library.Interfaces;
@@ -19,10 +20,10 @@ namespace Library.Services
         public async Task<UsuarioDTO> CriarAsync(CreateUsuarioDTO dto)
         {
             if (await _repository.ExisteCpfAsync(dto.Cpf))
-                throw new InvalidOperationException("Já existe um usuário cadastrado com este CPF.");
+                throw new BusinessException("Já existe um usuário cadastrado com este CPF.");
 
             if (await _repository.ExisteEmailAsync(dto.Email))
-                throw new InvalidOperationException("Já existe um usuário cadastrado com este e-mail.");
+                throw new BusinessException("Já existe um usuário cadastrado com este e-mail.");
 
             var usuario = _mapper.Map<Usuario>(dto);
             usuario.DatadeCadastro = DateTime.UtcNow;
@@ -40,25 +41,28 @@ namespace Library.Services
             return _mapper.Map<IEnumerable<UsuarioDTO>>(usuarios);
         }
 
-        public async Task<UsuarioDTO?> BuscarPorCpfAsync(string cpf)
+        public async Task<UsuarioDTO> BuscarPorCpfAsync(string cpf)
         {
             var usuario = await _repository.BuscarPorCpfAsync(cpf);
 
-            return usuario == null ? null : _mapper.Map<UsuarioDTO>(usuario);
+            if (usuario == null)
+                throw new NotFoundException("Usuário não encontrado.");
+
+            return _mapper.Map<UsuarioDTO>(usuario);
         }
 
-        public async Task<bool> AtualizarAsync(int id, CreateUsuarioDTO dto)
+        public async Task AtualizarAsync(int id, CreateUsuarioDTO dto)
         {
             var usuario = await _repository.BuscarPorIdAsync(id);
 
             if (usuario == null || !usuario.Ativo)
-                return false;
+                throw new NotFoundException("Usuário não encontrado ou inativo.");
 
             if (await _repository.ExisteCpfEmOutroUsuarioAsync(id, dto.Cpf))
-                throw new InvalidOperationException("O CPF informado já está em uso por outro usuário.");
+                throw new BusinessException("O CPF informado já está em uso por outro usuário.");
 
             if (await _repository.ExisteEmailEmOutroUsuarioAsync(id, dto.Email))
-                throw new InvalidOperationException("O e-mail informado já está em uso por outro usuário.");
+                throw new BusinessException("O e-mail informado já está em uso por outro usuário.");
 
             usuario.Nome = dto.Nome;
             usuario.Cpf = dto.Cpf;
@@ -66,20 +70,18 @@ namespace Library.Services
             usuario.Telefone = dto.Telefone;
 
             await _repository.UpdateAsync(usuario);
-            return true;
         }
 
-        public async Task<bool> DesativarAsync(int id)
+        public async Task DesativarAsync(int id)
         {
             var usuario = await _repository.BuscarPorIdAsync(id);
 
             if (usuario == null || !usuario.Ativo)
-                return false;
+                throw new NotFoundException("Usuário não encontrado ou já está inativo.");
 
             usuario.Ativo = false;
 
             await _repository.UpdateAsync(usuario);
-            return true;
         }
     }
 }

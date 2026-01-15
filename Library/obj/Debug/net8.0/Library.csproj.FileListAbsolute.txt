@@ -141,3 +141,4 @@ C:\Users\Micro\Desktop\projeto_biblioteca\Library\bin\Debug\net8.0\runtimes\win\
 C:\Users\Micro\Desktop\projeto_biblioteca\Library\bin\Debug\net8.0\runtimes\win\lib\net6.0\System.Windows.Extensions.dll
 C:\Users\Micro\Desktop\projeto_biblioteca\Library\bin\Debug\net8.0\AutoMapper.dll
 C:\Users\Micro\Desktop\projeto_biblioteca\Library\bin\Debug\net8.0\AutoMapper.Extensions.Microsoft.DependencyInjection.dll
+C:\Users\Micro\Desktop\projeto_biblioteca\Library\obj\Debug\net8.0\Library.sourcelink.json

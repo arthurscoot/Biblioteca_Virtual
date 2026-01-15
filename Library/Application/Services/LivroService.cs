@@ -1,4 +1,5 @@
 using AutoMapper;
+using Domain.Exceptions;
 using Library.DTOs;
 using Library.Entities;
 using Library.Interfaces;
@@ -36,7 +37,7 @@ public class LivroService : ILivroService
     {
         // 1. Verifica se o autor com o ID fornecido existe e está ativo.
         //    Isso evita buscar livros para um autor inválido ou inativo.
-        var autor = await _autorRepository.BuscarPorIdAsync(autorId);
+        var autor = await _autorRepository.BuscarAtivoPorIdAsync(autorId);
 
         if (autor == null || !autor.Ativo)
         {
@@ -51,13 +52,13 @@ public class LivroService : ILivroService
     }
 
 
-     public async Task<LivroDTO?> BuscarPorIdAsync(int id)
+     public async Task<LivroDTO> BuscarPorIdAsync(int id)
     {
         var livro = await _livroRepository.BuscarPorIdAsync(id);
 
         if (livro == null)
         {
-            return null;
+            throw new NotFoundException("Livro não encontrado.");
         }
 
         return _mapper.Map<LivroDTO>(livro);
@@ -80,11 +81,11 @@ public class LivroService : ILivroService
 
     public async Task<LivroDTO> CriarAsync(CreateLivroDTO dto) {
         // 1. Chama o AutorService para validar se o autor existe e está ativo.
-        var autor = await _autorRepository.BuscarPorIdAsync(dto.AutorId);
+        var autor = await _autorRepository.BuscarAtivoPorIdAsync(dto.AutorId);
         if (autor == null || !autor.Ativo)
         {
             // Usar uma exceção mais específica é uma boa prática.
-            throw new ArgumentException("Autor não encontrado ou inativo.");
+            throw new NotFoundException("Autor não encontrado ou inativo.");
         }
 
         // 2. Verifica se já existe um livro com o mesmo ISBN (comparando string com string).
@@ -92,7 +93,7 @@ public class LivroService : ILivroService
         if (livroExistente)
         {
     
-            throw new InvalidOperationException("Já existe um livro com este ISBN.");
+            throw new BusinessException("Já existe um livro com este ISBN.");
         }
 
         // 3. Cria a nova entidade Livro
@@ -106,24 +107,24 @@ public class LivroService : ILivroService
         return _mapper.Map<LivroDTO>(novoLivro);
     }
     
-    public async Task<bool> AtualizarAsync(int id, LivroDTO dto)
+    public async Task AtualizarAsync(int id, LivroDTO dto)
     {
         var livro = await _livroRepository.BuscarPorIdAsync(id);
 
         if (livro == null)
-            return false;
+            throw new NotFoundException("Livro não encontrado.");
 
         // Verifica se o autor existe se o ID mudou
         if (livro.AutorId != dto.AutorId)
         {
-            var autor = await _autorRepository.BuscarPorIdAsync(dto.AutorId);
+            var autor = await _autorRepository.BuscarAtivoPorIdAsync(dto.AutorId);
             if (autor == null || !autor.Ativo)
-                throw new ArgumentException("Autor não encontrado ou inativo.");
+                throw new NotFoundException("Autor não encontrado ou inativo.");
         }
 
         // Verifica se o ISBN já existe em outro livro
         if (livro.ISBN != dto.ISBN && await _livroRepository.ExisteIsbnEmOutroLivroAsync(id, dto.ISBN))
-            throw new InvalidOperationException("Já existe um livro com este ISBN.");
+            throw new BusinessException("Já existe um livro com este ISBN.");
 
         livro.Titulo = dto.Titulo;
         livro.ISBN = dto.ISBN;
@@ -133,19 +134,17 @@ public class LivroService : ILivroService
         livro.AutorId = dto.AutorId;
 
         await _livroRepository.UpdateAsync(livro);
-        return true;
     }
 
-    public async Task<bool> RemoverAsync(int id)
+    public async Task RemoverAsync(int id)
     {
         var livro = await _livroRepository.BuscarPorIdAsync(id);
-        if (livro == null) return false;
+        if (livro == null) throw new NotFoundException("Livro não encontrado.");
 
         if (await _emprestimoRepository.ExisteEmprestimoAtivoPorLivroAsync(id))
-            throw new InvalidOperationException("Não é possível remover o livro pois existem empréstimos ativos.");
+            throw new BusinessException("Não é possível remover o livro pois existem empréstimos ativos.");
 
         await _livroRepository.DeleteAsync(livro);
-        return true;
     }
 
 

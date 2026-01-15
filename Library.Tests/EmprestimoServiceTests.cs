@@ -1,3 +1,4 @@
+using Domain.Exceptions;
 using Library.DTOs;
 using Library.Entities;
 using Library.Interfaces;
@@ -71,7 +72,7 @@ namespace Library.Tests
             _mockLivroRepository.Setup(r => r.BuscarPorIdAsync(dto.LivroId)).ReturnsAsync(livro);
 
             // Act & Assert
-            var ex = await Assert.ThrowsAsync<Exception>(() => _service.RealizarEmprestimoAsync(dto));
+            var ex = await Assert.ThrowsAsync<BusinessException>(() => _service.RealizarEmprestimoAsync(dto));
             Assert.Equal("Livro indisponível no estoque.", ex.Message);
         }
 
@@ -93,10 +94,9 @@ namespace Library.Tests
             _mockLivroRepository.Setup(r => r.BuscarPorIdAsync(emprestimo.LivroId)).ReturnsAsync(livro);
 
             // Act
-            var result = await _service.DevolverEmprestimoAsync(emprestimoId);
+            await _service.DevolverEmprestimoAsync(emprestimoId);
 
             // Assert
-            Assert.True(result);
             Assert.False(emprestimo.Ativo);
             Assert.NotNull(emprestimo.DataDevolucaoReal);
             _mockLivroRepository.Verify(r => r.UpdateAsync(livro), Times.Once); // Verifica reposição de estoque
@@ -119,10 +119,9 @@ namespace Library.Tests
             _mockEmprestimoRepository.Setup(r => r.BuscarPorIdAsync(emprestimoId)).ReturnsAsync(emprestimo);
 
             // Act
-            var result = await _service.RenovarEmprestimoAsync(emprestimoId);
+            await _service.RenovarEmprestimoAsync(emprestimoId);
 
             // Assert
-            Assert.True(result);
             Assert.True(emprestimo.Renovado);
             Assert.True(emprestimo.DataPrevistaDevolucao > dataPrevistaOriginal);
         }

@@ -32,10 +32,6 @@ namespace Library.Controllers
         public async Task<IActionResult> BuscarPorId(int id)
         {
             var livro = await _livroService.BuscarPorIdAsync(id);
-
-            if (livro == null)
-                return NotFound("Livro não encontrado.");
-
             return Ok(livro);
         }
         
@@ -56,39 +52,21 @@ namespace Library.Controllers
         [HttpPost]
         public async Task<IActionResult> Criar([FromBody] CreateLivroDTO dto)
         {
-            try
-            {
-                var livroCriado = await _livroService.CriarAsync(dto);
+            var livroCriado = await _livroService.CriarAsync(dto);
 
-                // Retorna 201 Created com a localização do novo recurso e o objeto criado.
-                return CreatedAtAction(
-                    nameof(BuscarPorId),
-                    new { id = livroCriado.Id },
-                    livroCriado);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            // Retorna 201 Created com a localização do novo recurso e o objeto criado.
+            return CreatedAtAction(
+                nameof(BuscarPorId),
+                new { id = livroCriado.Id },
+                livroCriado);
         }
 
   
         [HttpPut("{id}")]
         public async Task<IActionResult> Atualizar(int id, [FromBody] LivroDTO dto)
         {
-            try
-            {
-                var atualizado = await _livroService.AtualizarAsync(id, dto);
-
-                if (!atualizado)
-                    return NotFound("Livro não encontrado.");
-
-                return NoContent(); // 204
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            await _livroService.AtualizarAsync(id, dto);
+            return NoContent(); // 204
         }
 
 }}

@@ -8,12 +8,14 @@ namespace Library.Interfaces
     {
         Task<EmprestimoDTO> RealizarEmprestimoAsync(CreateEmprestimoDTO dto);
 
-        Task<bool> DevolverEmprestimoAsync(int emprestimoId);
+        Task DevolverEmprestimoAsync(int emprestimoId);
 
-        Task<bool> RenovarEmprestimoAsync(int emprestimoId);
+        Task RenovarEmprestimoAsync(int emprestimoId);
 
         Task<IEnumerable<EmprestimoDTO>> ListarEmprestimosAtivosPorUsuarioAsync(int usuarioId);
 
         Task<IEnumerable<EmprestimoDTO>> ListarHistoricoEmprestimosPorUsuarioAsync(int usuarioId);
+
+        Task<EmprestimoDTO> BuscarPorIdAsync(int id);
     }
 }

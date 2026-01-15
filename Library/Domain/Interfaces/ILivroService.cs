@@ -9,10 +9,10 @@ namespace Library.Interfaces
         Task<IEnumerable<LivroDTO>> ListarLivrosAsync(String titulo, String isbn);
         Task<IEnumerable<LivroDTO>> ListarEmEstoqueAsync();
         Task<IEnumerable<LivroDTO>> ListarPorAutor(int autorId);
-        Task<LivroDTO?> BuscarPorIdAsync(int id);
+        Task<LivroDTO> BuscarPorIdAsync(int id);
         Task<LivroDTO> CriarAsync(CreateLivroDTO dto);
-        Task<bool> AtualizarAsync(int id, LivroDTO dto);
+        Task AtualizarAsync(int id, LivroDTO dto);
 
-        Task<bool> RemoverAsync(int id);
+        Task RemoverAsync(int id);
     }
 }

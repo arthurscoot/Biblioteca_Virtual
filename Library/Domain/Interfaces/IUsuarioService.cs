@@ -6,8 +6,8 @@ namespace Library.Interfaces
     {
         Task<UsuarioDTO> CriarAsync(CreateUsuarioDTO dto);
         Task<IEnumerable<UsuarioDTO>> ListarAtivosAsync();
-        Task<UsuarioDTO?> BuscarPorCpfAsync(string cpf);
-        Task<bool> AtualizarAsync(int id, CreateUsuarioDTO dto);
-        Task<bool> DesativarAsync(int id);
+        Task<UsuarioDTO> BuscarPorCpfAsync(string cpf);
+        Task AtualizarAsync(int id, CreateUsuarioDTO dto);
+        Task DesativarAsync(int id);
     }
 }

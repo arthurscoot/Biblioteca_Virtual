@@ -10,13 +10,11 @@ namespace Library.Controllers
     {
         private readonly IAutorService _autorService;
 
-        // Injeção do service
         public AutorController(IAutorService autorService)
         {
             _autorService = autorService;
         }
 
-       
         [HttpGet]
         public async Task<IActionResult> Listar([FromQuery] int page, [FromQuery] int size)
         {
@@ -24,65 +22,37 @@ namespace Library.Controllers
             return Ok(autores);
         }
 
-      
         [HttpGet("{id}")]
         public async Task<IActionResult> BuscarPorId(int id)
         {
-            var autor = await _autorService.BuscarPorIdAsync(id);
-
-            if (autor == null)
-                return NotFound("Autor não encontrado.");
-
-            return Ok(autor);
+            var autor = await _autorService.BuscarAtivoPorIdAsync(id);
+            return Ok(autor); // se não existir, o service lança NotFoundException
         }
 
         [HttpPost]
         public async Task<IActionResult> Criar([FromBody] CreateAutorDto dto)
         {
-            try
-            {
-                var autorCriado = await _autorService.CriarAsync(dto);
+            var autorCriado = await _autorService.CriarAsync(dto);
 
-                // Retorna 201 + localização do recurso
-                return CreatedAtAction(
-                    nameof(BuscarPorId),
-                    new { id = autorCriado.Id },
-                    autorCriado
-                );
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            return CreatedAtAction(
+                nameof(BuscarPorId),
+                new { id = autorCriado.Id },
+                autorCriado
+            );
         }
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Atualizar(int id, [FromBody] CreateAutorDto dto)
         {
-            try
-            {
-                var atualizado = await _autorService.AtualizarAsync(id, dto);
-
-                if (!atualizado)
-                    return NotFound("Autor não encontrado.");
-
-                return NoContent(); // 204
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(ex.Message);
-            }
+            await _autorService.AtualizarAsync(id, dto);
+            return NoContent();
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Remover(int id)
         {
-            var sucesso = await _autorService.DesativarAsync(id);
-
-            if (!sucesso) 
-                return NotFound("Autor não encontrado ou já está inativo.");
-        
-            return NoContent(); 
+            await _autorService.DesativarAsync(id);
+            return NoContent();
         }
-
-}}
+    }
+}

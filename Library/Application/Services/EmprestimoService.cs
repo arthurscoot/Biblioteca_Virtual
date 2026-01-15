@@ -1,3 +1,4 @@
+using Domain.Exceptions;
 using Library.DTOs;
 using Library.Entities;
 using Library.Interfaces;
@@ -20,11 +21,11 @@ public class EmprestimoService : IEmprestimoService
         _livroRepository = livroRepository;
     }
 
-    public async Task<EmprestimoDTO?> BuscarPorIdAsync(int id)
+    public async Task<EmprestimoDTO> BuscarPorIdAsync(int id)
     {
         var emprestimo = await _emprestimoRepository.BuscarPorIdAsync(id);
 
-        if (emprestimo == null) return null;
+        if (emprestimo == null) throw new NotFoundException("Empréstimo não encontrado.");
 
         return new EmprestimoDTO
         {
@@ -37,13 +38,13 @@ public class EmprestimoService : IEmprestimoService
         };
     }
 
-    public async Task<bool> DevolverEmprestimoAsync(int emprestimoId)
+    public async Task DevolverEmprestimoAsync(int emprestimoId)
     {
         // Recupera o empréstimo pelo ID
         var emprestimo = await _emprestimoRepository.BuscarPorIdAsync(emprestimoId);
 
-        if (emprestimo == null) throw new Exception("Empréstimo não encontrado.");
-        if (!emprestimo.Ativo) throw new Exception("Empréstimo já foi devolvido.");
+        if (emprestimo == null) throw new NotFoundException("Empréstimo não encontrado.");
+        if (!emprestimo.Ativo) throw new BusinessException("Empréstimo já foi devolvido.");
 
         // Recupera o livro e devolve 1 ao estoque
         var livro = await _livroRepository.BuscarPorIdAsync(emprestimo.LivroId);
@@ -60,8 +61,6 @@ public class EmprestimoService : IEmprestimoService
         emprestimo.Ativo = false;
 
         await _emprestimoRepository.UpdateAsync(emprestimo);
-
-        return true;
     }
 
     public async Task<IEnumerable<EmprestimoDTO>> ListarEmprestimosAtivosPorUsuarioAsync(int usuarioId)
@@ -100,29 +99,29 @@ public class EmprestimoService : IEmprestimoService
         // 1. Validar Usuário
         var usuario = await _usuarioRepository.BuscarPorIdAsync(dto.UsuarioId);
         if (usuario == null)
-            throw new Exception("Usuário não encontrado.");
+            throw new NotFoundException("Usuário não encontrado.");
 
         if (!usuario.Ativo)
-            throw new Exception("Usuário inativo não pode realizar empréstimos.");
+            throw new BusinessException("Usuário inativo não pode realizar empréstimos.");
 
         // 1.1 Regra: multa pendente
         var possuiMultaPendente = await _emprestimoRepository.PossuiMultaPendenteAsync(dto.UsuarioId);
 
         if (possuiMultaPendente)
-            throw new Exception("Usuário possui multa pendente.");
+            throw new BusinessException("Usuário possui multa pendente.");
 
         // 1.2 Regra: Máximo de 3 empréstimos simultâneos
         var emprestimosAtivos = await _emprestimoRepository.ListarAtivosPorUsuarioAsync(dto.UsuarioId);
         if (emprestimosAtivos.Count() >= 3)
-            throw new Exception("Usuário já atingiu o limite máximo de 3 empréstimos simultâneos.");
+            throw new BusinessException("Usuário já atingiu o limite máximo de 3 empréstimos simultâneos.");
 
         // 2. Validar Livro e Estoque
         var livro = await _livroRepository.BuscarPorIdAsync(dto.LivroId);
         if (livro == null)
-            throw new Exception("Livro não encontrado.");
+            throw new NotFoundException("Livro não encontrado.");
 
         if (livro.QuantidadeEstoque <= 0)
-            throw new Exception("Livro indisponível no estoque.");
+            throw new BusinessException("Livro indisponível no estoque.");
 
         // 3. Atualizar Estoque (Decrementa 1 unidade)
         livro.QuantidadeEstoque--;
@@ -155,24 +154,21 @@ public class EmprestimoService : IEmprestimoService
         };
     }
 
-    public async Task<bool> RenovarEmprestimoAsync(int emprestimoId)
+    public async Task RenovarEmprestimoAsync(int emprestimoId)
     {
         var emprestimo = await _emprestimoRepository.BuscarPorIdAsync(emprestimoId);
 
-        if (emprestimo == null) throw new Exception("Emprestimo não encontrado.");
-        if (!emprestimo.Ativo) throw new Exception("Emprestimo já foi devolvido.");
-        if (emprestimo.Renovado) throw new Exception("Emprestimo já foi renovado.");
+        if (emprestimo == null) throw new NotFoundException("Emprestimo não encontrado.");
+        if (!emprestimo.Ativo) throw new BusinessException("Emprestimo já foi devolvido.");
+        if (emprestimo.Renovado) throw new BusinessException("Emprestimo já foi renovado.");
 
         var agora = _timeProvider.GetLocalNow().DateTime;
-        if (agora > emprestimo.DataPrevistaDevolucao) throw new Exception("Emprestimo já está atrasado.");
+        if (agora > emprestimo.DataPrevistaDevolucao) throw new BusinessException("Emprestimo já está atrasado.");
         
-        
-
         emprestimo.DataPrevistaDevolucao = emprestimo.DataPrevistaDevolucao.AddDays(14);
         emprestimo.Renovado = true;
 
         await _emprestimoRepository.UpdateAsync(emprestimo);
-        return true;
     }
 
     private decimal CalcularMulta(DateTime dataPrevista, DateTime dataReal)

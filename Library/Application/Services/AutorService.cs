@@ -1,4 +1,5 @@
 using AutoMapper;
+using Domain.Exceptions;
 using Library.DTOs;
 using Library.Entities;
 using Library.Interfaces;
@@ -22,59 +23,37 @@ namespace Library.Services
             return _mapper.Map<IEnumerable<AutorDto>>(autores);
         }
 
-        public async Task<AutorDto?> BuscarPorIdAsync(int id)
+        public async Task<AutorDto> BuscarAtivoPorIdAsync(int id)
         {
-            var autor = await _repository.BuscarPorIdAsync(id);
+            var autor = await _repository.BuscarAtivoPorIdAsync(id);
 
             if (autor == null || !autor.Ativo)
-                return null;
+                throw new NotFoundException("Autor não encontrado.");
 
             return _mapper.Map<AutorDto>(autor);
         }
 
         public async Task<AutorDto> CriarAsync(CreateAutorDto dto)
         {
-         
-            if (dto.DataNascimento.Date > DateTime.Today)
-                throw new Exception("A data de nascimento não pode ser maior que a data atual.");
-
- 
-            var hoje = DateTime.Today;
-            var idade = hoje.Year - dto.DataNascimento.Year;
-
-            if (dto.DataNascimento.Date > hoje.AddYears(-idade))
-                idade--;
-
-            if (idade < 16)
-                throw new Exception("O autor deve ter no mínimo 16 anos.");
+            ValidarIdade(dto.DataNascimento);
 
             if (await _repository.ExisteAutorComMesmoNomeAsync(dto.Nome))
-                throw new Exception("Já existe um autor com o mesmo nome.");
+                throw new BusinessException("Já existe um autor com o mesmo nome.");
 
             var autor = _mapper.Map<Autor>(dto);
-
             await _repository.AddAsync(autor);
 
             return _mapper.Map<AutorDto>(autor);
         }
 
-        public async Task<bool> AtualizarAsync(int id, CreateAutorDto dto)
+        public async Task AtualizarAsync(int id, CreateAutorDto dto)
         {
-            var autor = await _repository.BuscarPorIdAsync(id);
+            var autor = await _repository.BuscarAtivoPorIdAsync(id);
 
             if (autor == null)
-                return false;
-            if (dto.DataNascimento.Date > DateTime.Today)
-                throw new Exception("A data de nascimento não pode ser maior que a data atual.");
+                throw new NotFoundException("Autor não encontrado.");
 
-            var hoje = DateTime.Today;
-            var idade = hoje.Year - dto.DataNascimento.Year;
-
-            if (dto.DataNascimento.Date > hoje.AddYears(-idade))
-                idade--;
-
-            if (idade < 16)
-                throw new Exception("O autor deve ter no mínimo 16 anos.");
+            ValidarIdade(dto.DataNascimento);
 
             autor.Nome = dto.Nome;
             autor.DataNascimento = dto.DataNascimento;
@@ -82,21 +61,32 @@ namespace Library.Services
             autor.Biografia = dto.Biografia;
 
             await _repository.UpdateAsync(autor);
-
-            return true;
         }
 
-        public async Task<bool> DesativarAsync(int id)
+        public async Task DesativarAsync(int id)
         {
-            var autor = await _repository.BuscarPorIdAsync(id);
-            
-            if (autor == null || !autor.Ativo) {
-                return false;
-            }
-            autor.Ativo = false; 
-            
+            var autor = await _repository.BuscarAtivoPorIdAsync(id);
+
+            if (autor == null)
+                throw new NotFoundException("Autor não encontrado ou já está inativo.");
+
+            autor.Ativo = false;
             await _repository.UpdateAsync(autor);
-            return true;
+        }
+
+        private static void ValidarIdade(DateTime dataNascimento)
+        {
+            if (dataNascimento.Date > DateTime.Today)
+                throw new ValidationException("A data de nascimento não pode ser futura.");
+
+            var hoje = DateTime.Today;
+            var idade = hoje.Year - dataNascimento.Year;
+
+            if (dataNascimento.Date > hoje.AddYears(-idade))
+                idade--;
+
+            if (idade < 16)
+                throw new BusinessException("O autor deve ter no mínimo 16 anos.");
         }
     }
 }

@@ -1,4 +1,5 @@
 using AutoMapper;
+using Domain.Exceptions;
 using Library.DTOs;
 using Library.Entities;
 using Library.Interfaces;
@@ -75,7 +76,7 @@ namespace Library.Tests
         {
             // Arrange
             int autorId = 1;
-            _mockAutorRepository.Setup(r => r.BuscarPorIdAsync(autorId)).ReturnsAsync((Autor?)null);
+            _mockAutorRepository.Setup(r => r.BuscarAtivoPorIdAsync(autorId)).ReturnsAsync((Autor?)null);
 
             // Act
             var result = await _service.ListarPorAutor(autorId);
@@ -95,7 +96,7 @@ namespace Library.Tests
                 new Livro { Id = 1, Titulo = "Livro 1", AutorId = autorId, Autor = autor }
             };
 
-            _mockAutorRepository.Setup(r => r.BuscarPorIdAsync(autorId)).ReturnsAsync(autor);
+            _mockAutorRepository.Setup(r => r.BuscarAtivoPorIdAsync(autorId)).ReturnsAsync(autor);
             _mockLivroRepository.Setup(r => r.ListarPorAutorAsync(autorId)).ReturnsAsync(livros);
 
             // Act
@@ -106,7 +107,7 @@ namespace Library.Tests
         }
 
         [Fact]
-        public async Task BuscarPorIdAsync_DeveRetornarLivro_QuandoEncontrado()
+        public async Task BuscarAtivoPorIdAsync_DeveRetornarLivro_QuandoEncontrado()
         {
             // Arrange
             int id = 1;
@@ -122,17 +123,14 @@ namespace Library.Tests
         }
 
         [Fact]
-        public async Task BuscarPorIdAsync_DeveRetornarNull_QuandoNaoEncontrado()
+        public async Task BuscarAtivoPorIdAsync_DeveLancarExcecao_QuandoNaoEncontrado()
         {
             // Arrange
             int id = 1;
             _mockLivroRepository.Setup(r => r.BuscarPorIdAsync(id)).ReturnsAsync((Livro?)null);
 
-            // Act
-            var result = await _service.BuscarPorIdAsync(id);
-
-            // Assert
-            Assert.Null(result);
+            // Act & Assert
+            await Assert.ThrowsAsync<NotFoundException>(() => _service.BuscarPorIdAsync(id));
         }
 
         [Fact]
@@ -142,7 +140,7 @@ namespace Library.Tests
             var dto = new CreateLivroDTO { Titulo = "Novo Livro", ISBN = "123", AutorId = 1 };
             var autor = new Autor { Id = 1, Nome = "Autor", Ativo = true };
 
-            _mockAutorRepository.Setup(r => r.BuscarPorIdAsync(dto.AutorId)).ReturnsAsync(autor);
+            _mockAutorRepository.Setup(r => r.BuscarAtivoPorIdAsync(dto.AutorId)).ReturnsAsync(autor);
             _mockLivroRepository.Setup(r => r.ExisteIsbnAsync(dto.ISBN)).ReturnsAsync(false);
 
             // Act
@@ -159,10 +157,10 @@ namespace Library.Tests
         {
             // Arrange
             var dto = new CreateLivroDTO { AutorId = 1 };
-            _mockAutorRepository.Setup(r => r.BuscarPorIdAsync(dto.AutorId)).ReturnsAsync((Autor?)null);
+            _mockAutorRepository.Setup(r => r.BuscarAtivoPorIdAsync(dto.AutorId)).ReturnsAsync((Autor?)null);
 
             // Act & Assert
-            var ex = await Assert.ThrowsAsync<ArgumentException>(() => _service.CriarAsync(dto));
+            var ex = await Assert.ThrowsAsync<NotFoundException>(() => _service.CriarAsync(dto));
             Assert.Equal("Autor não encontrado ou inativo.", ex.Message);
         }
 
@@ -173,11 +171,11 @@ namespace Library.Tests
             var dto = new CreateLivroDTO { ISBN = "123", AutorId = 1 };
             var autor = new Autor { Id = 1, Ativo = true };
 
-            _mockAutorRepository.Setup(r => r.BuscarPorIdAsync(dto.AutorId)).ReturnsAsync(autor);
+            _mockAutorRepository.Setup(r => r.BuscarAtivoPorIdAsync(dto.AutorId)).ReturnsAsync(autor);
             _mockLivroRepository.Setup(r => r.ExisteIsbnAsync(dto.ISBN)).ReturnsAsync(true);
 
             // Act & Assert
-            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.CriarAsync(dto));
+            var ex = await Assert.ThrowsAsync<BusinessException>(() => _service.CriarAsync(dto));
             Assert.Equal("Já existe um livro com este ISBN.", ex.Message);
         }
 
@@ -193,7 +191,7 @@ namespace Library.Tests
             _mockLivroRepository.Setup(r => r.ExisteIsbnEmOutroLivroAsync(id, dto.ISBN)).ReturnsAsync(true);
 
             // Act & Assert
-            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.AtualizarAsync(id, dto));
+            var ex = await Assert.ThrowsAsync<BusinessException>(() => _service.AtualizarAsync(id, dto));
             Assert.Equal("Já existe um livro com este ISBN.", ex.Message);
         }
 
@@ -207,10 +205,9 @@ namespace Library.Tests
             _mockEmprestimoRepository.Setup(r => r.ExisteEmprestimoAtivoPorLivroAsync(id)).ReturnsAsync(false);
 
             // Act
-            var result = await _service.RemoverAsync(id);
+            await _service.RemoverAsync(id);
 
             // Assert
-            Assert.True(result);
             _mockLivroRepository.Verify(r => r.DeleteAsync(livro), Times.Once);
         }
 
@@ -224,7 +221,7 @@ namespace Library.Tests
             _mockEmprestimoRepository.Setup(r => r.ExisteEmprestimoAtivoPorLivroAsync(id)).ReturnsAsync(true);
 
             // Act & Assert
-            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => _service.RemoverAsync(id));
+            var ex = await Assert.ThrowsAsync<BusinessException>(() => _service.RemoverAsync(id));
             Assert.Equal("Não é possível remover o livro pois existem empréstimos ativos.", ex.Message);
             _mockLivroRepository.Verify(r => r.DeleteAsync(It.IsAny<Livro>()), Times.Never);
         }
@@ -239,14 +236,13 @@ namespace Library.Tests
             var autor = new Autor { Id = 1, Ativo = true };
 
             _mockLivroRepository.Setup(r => r.BuscarPorIdAsync(id)).ReturnsAsync(livro);
-            _mockAutorRepository.Setup(r => r.BuscarPorIdAsync(dto.AutorId)).ReturnsAsync(autor);
+            _mockAutorRepository.Setup(r => r.BuscarAtivoPorIdAsync(dto.AutorId)).ReturnsAsync(autor);
             _mockLivroRepository.Setup(r => r.ExisteIsbnEmOutroLivroAsync(id, dto.ISBN)).ReturnsAsync(false);
 
             // Act
-            var result = await _service.AtualizarAsync(id, dto);
+            await _service.AtualizarAsync(id, dto);
 
             // Assert
-            Assert.True(result);
             Assert.Equal("Titulo Atualizado", livro.Titulo);
             _mockLivroRepository.Verify(r => r.UpdateAsync(livro), Times.Once);
         }

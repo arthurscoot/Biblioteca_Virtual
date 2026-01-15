@@ -31,11 +31,7 @@ namespace Library.Controllers
         [HttpPut("{emprestimoId}/devolver")]
         public async Task<IActionResult> DevolverEmprestimo(int emprestimoId)
         {
-            var sucesso = await _emprestimoService.DevolverEmprestimoAsync(emprestimoId);
-
-            if (!sucesso)
-                return NotFound("Empréstimo não encontrado ou já devolvido.");
-
+            await _emprestimoService.DevolverEmprestimoAsync(emprestimoId);
             return NoContent();
         }
 
@@ -43,11 +39,7 @@ namespace Library.Controllers
         [HttpPut("{emprestimoId}/renovar")]
         public async Task<IActionResult> RenovarEmprestimo(int emprestimoId)
         {
-            var sucesso = await _emprestimoService.RenovarEmprestimoAsync(emprestimoId);
-
-            if (!sucesso)
-                return BadRequest("Empréstimo não pode ser renovado.");
-
+            await _emprestimoService.RenovarEmprestimoAsync(emprestimoId);
             return NoContent();
         }
 
@@ -75,12 +67,8 @@ namespace Library.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> BuscarPorId(int id)
         {
-            var emprestimo = await _emprestimoService
-                .ListarHistoricoEmprestimosPorUsuarioAsync(id);
-
-            if (emprestimo == null)
-                return NotFound();
-
+            // Corrigido para usar o método correto de busca por ID
+            var emprestimo = await _emprestimoService.BuscarPorIdAsync(id);
             return Ok(emprestimo);
         }
     }
