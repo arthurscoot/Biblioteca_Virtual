@@ -1,44 +1,72 @@
-# Biblioteca_Virtual
+# Biblioteca Virtual API
 
+API RESTful para gerenciamento de uma biblioteca virtual, desenvolvida em .NET 8.
 
+## 🚀 Instruções de Setup
 
-## Este segmento reúne os modelos de JSON utilizados para criação das entidades do sistema de biblioteca.
+### Pré-requisitos
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- [SQL Server](https://www.microsoft.com/en-us/sql-server/sql-server-downloads) 
 
-### 👤 Usuário — Criação
-{
-  "nome": "",
-  "cpf": "",
-  "cpfResponsavel": "", (caso exista um responsável)
-  "email": "",
-  "telefone": "00 (00) 00000-0000"
-  "dataNascimento": "0001-01-01",
-}
+### Configuração
+1. Clone o repositório:
+   ```bash
+   git clone https://github.com/arthurscoot/Biblioteca_Virtual.git
+   ```
 
-### ✍️ Autor — Criação
-{
-  "nome": "",
-  "dataNascimento": "0001-01-01",
-  "paisOrigem": "",
-  "biografia": ""
-}
+2. Configure a string de conexão no `appsettings.json` (localizado em `Library`) ou via variáveis de ambiente. O padrão espera uma conexão local:
+   ```json
+   "ConnectionStrings": {
+     "DefaultConnection": "Server=localhost;Database=LibraryDb;Trusted_Connection=True;TrustServerCertificate=True;"
+   }
+   ```
 
-### 📚 Livro — Criação
-{
-  "titulo": "",
-  "anoPublicacao": 0,
-  "isbn": "",
-  "categoria": "",
-  "quantidadeEstoque": 0,
-  "autorId": 0
-}
+3. Restaure as dependências:
+   ```bash
+   dotnet restore
+   ```
 
-### 🔄 Empréstimo — Criação
-{
-  "usuarioId": 0,
-  "livroId": 0
-}
+##  Como executar Migrations
 
-## Este segmento reune os EndPoints disponiveis.
+O projeto utiliza Entity Framework Core Code-First. Para aplicar as migrações e criar o banco de dados:
+
+1. Navegue até a pasta do projeto principal:
+   ```bash
+   cd .\Library\
+   ```
+
+2. Execute o comando de atualização do banco:
+   ```bash
+   dotnet ef database update
+   ```
+
+## 🧪 Como rodar Testes
+
+O projeto possui testes unitários cobrindo Serviços e Controllers.
+
+1. Navegue até a raiz da solução. (`Library.Tests`)
+Se estiver em `Library`faça:   
+```bash
+cd ..
+cd .\Library.Tests\
+ ```
+2. Execute os testes:
+   ```bash
+   dotnet test
+   ```
+
+## 🛠 Decisões Técnicas
+
+*   **Arquitetura**: O projeto segue princípios de **Clean Architecture** e **DDD (Domain-Driven Design)**, organizando o código em camadas lógicas (Domain, Application, Infrastructure, API) para separação de responsabilidades.
+*   **Entity Framework Core**: Utilizado como ORM para mapeamento objeto-relacional e interação com o SQL Server.
+*   **Repository Pattern**: Implementado para abstrair a lógica de acesso a dados e facilitar a testabilidade da camada de aplicação.
+*   **Domain Validations**: As regras de negócio e validações essenciais (ex: idade mínima, validação de datas, regras de empréstimo) estão encapsuladas nas Entidades de Domínio, garantindo integridade.
+*   **TimeProvider**: Utilização da abstração `TimeProvider` (nativa do .NET 8) para manipulação de datas. Isso permite testes unitários determinísticos simulando passagem de tempo para cálculo de multas e prazos.
+*   **Testes Unitários**: Implementados com **xUnit** e **Moq**, garantindo a qualidade do código e prevenindo regressões.
+
+---
+
+## 📖 Endpoints da API
 
 ### 👤 Usuários (`/api/usuarios`)
 - **GET** `/` - Lista os usuários ativos.
@@ -78,3 +106,59 @@
 ### 📊 Estatísticas (`/api/estatisticas`)
 - **GET** `/top_livros` - Retorna uma lista de livros mais emprestados.
 - **GET** `/top_autores` - Retorna uma lista de autores mais emprestados.
+
+## Modelos JSON (Exemplos)
+
+### 👤 Usuário — Criação
+```json
+{
+  "nome": "João Silva",
+  "cpf": "12345678900",
+  "cpfResponsavel": "",
+  "email": "joao@email.com",
+  "telefone": "55 (21) 98701-8732",
+  "dataNascimento": "2000-01-01"
+}
+```
+Usuário menor de 16 anos:
+
+```json
+{
+  "nome": "Pedro Santos",
+  "cpf": "22345678900",
+  "cpfResponsavel": "00345678901",
+  "email": "jorge@gmail.com",
+  "telefone": "55 (11) 98131-8732",
+  "dataNascimento": "2015-01-01"
+}
+```
+
+### ✍️ Autor — Criação
+```json
+{
+  "nome": "Arthur Moreira",
+  "dataNascimento": "2005-10-11",
+  "paisOrigem": "Brasil",
+  "biografia": "Autor de Mar Púrpura"
+}
+```
+
+### 📚 Livro — Criação
+```json
+{
+  "titulo": "Mar Púrpura",
+  "anoPublicacao": 2026,
+  "isbn": "9788700631625",
+  "categoria": "Terror",
+  "quantidadeEstoque": 100,
+  "autorId": 1
+}
+```
+
+### 🔄 Empréstimo — Criação
+```json
+{
+  "usuarioId": 1,
+  "livroId": 1
+}
+```
