@@ -25,9 +25,14 @@ namespace Library.Services
             if (await _repository.ExisteEmailAsync(dto.Email))
                 throw new BusinessException("Já existe um usuário cadastrado com este e-mail.");
 
-            var usuario = _mapper.Map<Usuario>(dto);
-            usuario.DatadeCadastro = DateTime.UtcNow;
-            usuario.Ativo = true;
+            var usuario = new Usuario(
+                dto.Nome,
+                dto.Cpf,
+                dto.Email,
+                dto.Telefone,
+                dto.DataNascimento,
+                dto.CpfResponsavel
+            );
 
             await _repository.AddAsync(usuario);
 
@@ -64,10 +69,7 @@ namespace Library.Services
             if (await _repository.ExisteEmailEmOutroUsuarioAsync(id, dto.Email))
                 throw new BusinessException("O e-mail informado já está em uso por outro usuário.");
 
-            usuario.Nome = dto.Nome;
-            usuario.Cpf = dto.Cpf;
-            usuario.Email = dto.Email;
-            usuario.Telefone = dto.Telefone;
+            usuario.Atualizar(dto.Nome, dto.Cpf, dto.Email, dto.Telefone);
 
             await _repository.UpdateAsync(usuario);
         }
@@ -79,7 +81,7 @@ namespace Library.Services
             if (usuario == null || !usuario.Ativo)
                 throw new NotFoundException("Usuário não encontrado ou já está inativo.");
 
-            usuario.Ativo = false;
+            usuario.Desativar();
 
             await _repository.UpdateAsync(usuario);
         }

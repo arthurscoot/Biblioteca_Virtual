@@ -1,75 +1,47 @@
 using System.Net;
+using System.Text.Json;
 using Domain.Exceptions;
 
-public class ExceptionMiddleware
+namespace Library.API.Middleware
 {
-    private readonly RequestDelegate _next;
-    private readonly ILogger<ExceptionMiddleware> _logger;
-
-    public ExceptionMiddleware(
-        RequestDelegate next,
-        ILogger<ExceptionMiddleware> logger)
+    public class ExceptionMiddleware
     {
-        _next = next;
-        _logger = logger;
-    }
+        private readonly RequestDelegate _next;
 
-    public async Task InvokeAsync(HttpContext context)
-    {
-        try
+        public ExceptionMiddleware(RequestDelegate next)
         {
-            await _next(context);
+            _next = next;
         }
-        catch (NotFoundException ex)
-        {
-            await HandleExceptionAsync(
-                context,
-                HttpStatusCode.NotFound,
-                ex.Message
-            );
-        }
-        catch (BusinessException ex)
-        {
-            await HandleExceptionAsync(
-                context,
-                HttpStatusCode.BadRequest,
-                ex.Message
-            );
-        }
-        catch (ValidationException ex)
-        {
-            await HandleExceptionAsync(
-                context,
-                HttpStatusCode.BadRequest,
-                ex.Message
-            );
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Erro inesperado");
 
-            await HandleExceptionAsync(
-                context,
-                HttpStatusCode.InternalServerError,
-                "Erro interno no servidor."
-            );
-        }
-    }
-
-    private static async Task HandleExceptionAsync(
-        HttpContext context,
-        HttpStatusCode statusCode,
-        string message)
-    {
-        context.Response.ContentType = "application/json";
-        context.Response.StatusCode = (int)statusCode;
-
-        var response = new
+        public async Task InvokeAsync(HttpContext context)
         {
-            status = context.Response.StatusCode,
-            error = message
-        };
+            try
+            {
+                await _next(context);
+            }
+            catch (Exception ex)
+            {
+                await HandleExceptionAsync(context, ex);
+            }
+        }
 
-        await context.Response.WriteAsJsonAsync(response);
+        private static Task HandleExceptionAsync(HttpContext context, Exception exception)
+        {
+            context.Response.ContentType = "application/json";
+            
+            var statusCode = exception switch
+            {
+                ValidationException => HttpStatusCode.BadRequest, // 400
+                BusinessException => HttpStatusCode.BadRequest,   // 400
+                NotFoundException => HttpStatusCode.NotFound,     // 404
+                _ => HttpStatusCode.InternalServerError           // 500
+            };
+
+            context.Response.StatusCode = (int)statusCode;
+
+            var response = new { message = exception.Message };
+            
+            return context.Response.WriteAsync(JsonSerializer.Serialize(response));
+        }
     }
 }

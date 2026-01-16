@@ -1,3 +1,4 @@
+using Library.API.Middleware;
 using Library.Data;
 using Library.Data.Repositories;
 using Library.Entities;
@@ -7,15 +8,11 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Porta
 builder.WebHost.UseUrls("http://localhost:5000");
 
-// Configuração para SQL Server (Requisito do Projeto)
-// Tenta pegar do appsettings.json, senão usa um padrão local para desenvolvimento
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
     ?? "Server=localhost;Database=LibraryDb;Trusted_Connection=True;TrustServerCertificate=True;";
 
-// DbContext
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connectionString, b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
 
@@ -37,6 +34,8 @@ builder.Services.AddScoped<IEstatisticaService, EstatisticaService>();
 
 var app = builder.Build();
 
+app.UseMiddleware<ExceptionMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -44,8 +43,6 @@ if (app.Environment.IsDevelopment())
 
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    // Garante que o banco de dados seja criado com o schema mais recente.
-    // Isso é útil em desenvolvimento para evitar o erro "no such table: __EFMigrationsHistory".
     db.Database.Migrate();
 
 

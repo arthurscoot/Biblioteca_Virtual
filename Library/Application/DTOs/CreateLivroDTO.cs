@@ -13,7 +13,6 @@ namespace Library.DTOs
         public int AnoPublicacao { get; set; }
 
         [Required(ErrorMessage = "O ISBN é obrigatório.")]
-        [StringLength(13, MinimumLength = 10, ErrorMessage = "O ISBN deve ter entre 10 e 13 caracteres.")]
         public string ISBN { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "A categoria é obrigatória.")]

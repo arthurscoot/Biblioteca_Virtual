@@ -5,8 +5,10 @@ namespace Library.DTOs
         public int Id { get; set; }
         public string Nome { get; set; } = string.Empty;
         public string Cpf { get; set; } = string.Empty;
+        public string CpfResponsavel { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Telefone { get; set; } = string.Empty;
+        public DateTime DatadeNascimento { get; set; }
         public DateTime DatadeCadastro { get; set; }
     }
 }

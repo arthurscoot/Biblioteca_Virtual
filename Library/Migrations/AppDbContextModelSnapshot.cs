@@ -148,7 +148,14 @@ namespace Library.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("CpfResponsavel")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("DatadeCadastro")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DatadeNascimento")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Email")

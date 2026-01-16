@@ -35,12 +35,16 @@ namespace Library.Services
 
         public async Task<AutorDto> CriarAsync(CreateAutorDto dto)
         {
-            ValidarIdade(dto.DataNascimento);
-
             if (await _repository.ExisteAutorComMesmoNomeAsync(dto.Nome))
                 throw new BusinessException("Já existe um autor com o mesmo nome.");
 
-            var autor = _mapper.Map<Autor>(dto);
+            var autor = new Autor(
+                dto.Nome,
+                dto.DataNascimento,
+                dto.PaisOrigem,
+                dto.Biografia
+            );
+
             await _repository.AddAsync(autor);
 
             return _mapper.Map<AutorDto>(autor);
@@ -53,12 +57,7 @@ namespace Library.Services
             if (autor == null)
                 throw new NotFoundException("Autor não encontrado.");
 
-            ValidarIdade(dto.DataNascimento);
-
-            autor.Nome = dto.Nome;
-            autor.DataNascimento = dto.DataNascimento;
-            autor.PaisOrigem = dto.PaisOrigem;
-            autor.Biografia = dto.Biografia;
+            autor.Atualizar(dto.Nome, dto.DataNascimento, dto.PaisOrigem, dto.Biografia);
 
             await _repository.UpdateAsync(autor);
         }
@@ -70,23 +69,8 @@ namespace Library.Services
             if (autor == null)
                 throw new NotFoundException("Autor não encontrado ou já está inativo.");
 
-            autor.Ativo = false;
+            autor.Desativar();
             await _repository.UpdateAsync(autor);
-        }
-
-        private static void ValidarIdade(DateTime dataNascimento)
-        {
-            if (dataNascimento.Date > DateTime.Today)
-                throw new ValidationException("A data de nascimento não pode ser futura.");
-
-            var hoje = DateTime.Today;
-            var idade = hoje.Year - dataNascimento.Year;
-
-            if (dataNascimento.Date > hoje.AddYears(-idade))
-                idade--;
-
-            if (idade < 16)
-                throw new BusinessException("O autor deve ter no mínimo 16 anos.");
         }
     }
 }

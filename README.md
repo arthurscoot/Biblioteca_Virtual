@@ -8,6 +8,8 @@
 {
   "nome": "",
   "cpf": "",
+  "cpfResponsavel": "", (caso exista um responsável)
+  "dataNascimento": "0001-01-01",
   "email": "",
   "telefone": "00 (00) 00000-0000"
 }

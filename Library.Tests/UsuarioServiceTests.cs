@@ -21,9 +21,6 @@ namespace Library.Tests
             _mockMapper = new Mock<IMapper>();
             _service = new UsuarioService(_mockRepository.Object, _mockMapper.Object);
 
-            // Setup básico do Mapper
-            _mockMapper.Setup(m => m.Map<Usuario>(It.IsAny<CreateUsuarioDTO>()))
-                       .Returns((CreateUsuarioDTO d) => new Usuario { Nome = d.Nome, Cpf = d.Cpf, Email = d.Email });
             _mockMapper.Setup(m => m.Map<UsuarioDTO>(It.IsAny<Usuario>()))
                        .Returns((Usuario u) => new UsuarioDTO { Nome = u.Nome, Cpf = u.Cpf, Email = u.Email });
             _mockMapper.Setup(m => m.Map<IEnumerable<UsuarioDTO>>(It.IsAny<IEnumerable<Usuario>>()))
@@ -33,15 +30,20 @@ namespace Library.Tests
         [Fact]
         public async Task CriarAsync_DeveCriarUsuario_QuandoDadosValidos()
         {
-            // Arrange
-            var dto = new CreateUsuarioDTO { Nome = "Teste", Cpf = "12345678900", Email = "teste@email.com", Telefone = "123456789" };
+            var dto = new CreateUsuarioDTO 
+            { 
+                Nome = "Teste", 
+                Cpf = "12345678900", 
+                Email = "teste@email.com", 
+                Telefone = "55 (11) 99999-9999",
+                DataNascimento = new DateTime(2000, 1, 1),
+                CpfResponsavel = null
+            };
             _mockRepository.Setup(r => r.ExisteCpfAsync(dto.Cpf)).ReturnsAsync(false);
             _mockRepository.Setup(r => r.ExisteEmailAsync(dto.Email)).ReturnsAsync(false);
 
-            // Act
             var result = await _service.CriarAsync(dto);
 
-            // Assert
             Assert.NotNull(result);
             Assert.Equal(dto.Nome, result.Nome);
             Assert.Equal(dto.Cpf, result.Cpf);
@@ -52,11 +54,16 @@ namespace Library.Tests
         [Fact]
         public async Task CriarAsync_DeveLancarExcecao_QuandoCpfJaExiste()
         {
-            // Arrange
-            var dto = new CreateUsuarioDTO { Nome = "Teste", Cpf = "12345678900", Email = "teste@email.com" };
+            var dto = new CreateUsuarioDTO 
+            { 
+                Nome = "Teste", 
+                Cpf = "12345678900", 
+                Email = "teste@email.com",
+                Telefone = "55 (11) 99999-9999",
+                DataNascimento = new DateTime(2000, 1, 1)
+            };
             _mockRepository.Setup(r => r.ExisteCpfAsync(dto.Cpf)).ReturnsAsync(true);
 
-            // Act & Assert
             var ex = await Assert.ThrowsAsync<BusinessException>(() => _service.CriarAsync(dto));
             Assert.Equal("Já existe um usuário cadastrado com este CPF.", ex.Message);
             _mockRepository.Verify(r => r.AddAsync(It.IsAny<Usuario>()), Times.Never);
@@ -65,12 +72,17 @@ namespace Library.Tests
         [Fact]
         public async Task CriarAsync_DeveLancarExcecao_QuandoEmailJaExiste()
         {
-            // Arrange
-            var dto = new CreateUsuarioDTO { Nome = "Teste", Cpf = "12345678900", Email = "teste@email.com" };
+            var dto = new CreateUsuarioDTO 
+            { 
+                Nome = "Teste", 
+                Cpf = "12345678900", 
+                Email = "teste@email.com",
+                Telefone = "55 (11) 99999-9999",
+                DataNascimento = new DateTime(2000, 1, 1)
+            };
             _mockRepository.Setup(r => r.ExisteCpfAsync(dto.Cpf)).ReturnsAsync(false);
             _mockRepository.Setup(r => r.ExisteEmailAsync(dto.Email)).ReturnsAsync(true);
 
-            // Act & Assert
             var ex = await Assert.ThrowsAsync<BusinessException>(() => _service.CriarAsync(dto));
             Assert.Equal("Já existe um usuário cadastrado com este e-mail.", ex.Message);
             _mockRepository.Verify(r => r.AddAsync(It.IsAny<Usuario>()), Times.Never);
@@ -79,18 +91,15 @@ namespace Library.Tests
         [Fact]
         public async Task ListarAtivosAsync_DeveRetornarListaDeUsuarios()
         {
-            // Arrange
             var usuarios = new List<Usuario>
             {
-                new Usuario { Id = 1, Nome = "User 1", Ativo = true },
-                new Usuario { Id = 2, Nome = "User 2", Ativo = true }
+                new Usuario("User 1", "11111111111", "email1@test.com", "5511999999999", new DateTime(2000, 1, 1), null),
+                new Usuario("User 2", "22222222222", "email2@test.com", "5511999999999", new DateTime(2000, 1, 1), null)
             };
             _mockRepository.Setup(r => r.ListarAtivosAsync()).ReturnsAsync(usuarios);
 
-            // Act
             var result = await _service.ListarAtivosAsync();
 
-            // Assert
             Assert.NotNull(result);
             Assert.Equal(2, result.Count());
         }
@@ -98,15 +107,12 @@ namespace Library.Tests
         [Fact]
         public async Task BuscarPorCpfAsync_DeveRetornarUsuario_QuandoEncontrado()
         {
-            // Arrange
             var cpf = "12345678900";
-            var usuario = new Usuario { Id = 1, Nome = "Teste", Cpf = cpf, Ativo = true };
+            var usuario = new Usuario("Teste", cpf, "email@test.com", "5511999999999", new DateTime(2000, 1, 1), null);
             _mockRepository.Setup(r => r.BuscarPorCpfAsync(cpf)).ReturnsAsync(usuario);
 
-            // Act
             var result = await _service.BuscarPorCpfAsync(cpf);
 
-            // Assert
             Assert.NotNull(result);
             Assert.Equal(cpf, result.Cpf);
         }
@@ -114,30 +120,33 @@ namespace Library.Tests
         [Fact]
         public async Task BuscarPorCpfAsync_DeveLancarExcecao_QuandoNaoEncontrado()
         {
-            // Arrange
             var cpf = "12345678900";
             _mockRepository.Setup(r => r.BuscarPorCpfAsync(cpf)).ReturnsAsync((Usuario?)null);
 
-            // Act & Assert
             await Assert.ThrowsAsync<NotFoundException>(() => _service.BuscarPorCpfAsync(cpf));
         }
 
         [Fact]
         public async Task AtualizarAsync_DeveAtualizarUsuario_QuandoDadosValidos()
         {
-            // Arrange
             var id = 1;
-            var dto = new CreateUsuarioDTO { Nome = "Novo Nome", Cpf = "12345678900", Email = "novo@email.com" };
-            var usuario = new Usuario { Id = id, Nome = "Antigo", Cpf = "111", Email = "antigo@email.com", Ativo = true };
+            var dto = new CreateUsuarioDTO 
+            { 
+                Nome = "Novo Nome", 
+                Cpf = "12345678900", 
+                Email = "novo@email.com",
+                Telefone = "55 (11) 88888-8888",
+                DataNascimento = new DateTime(2000, 1, 1)
+            };
+            // Instanciando via construtor (Id será 0, mas o mock retorna este objeto quando solicitado)
+            var usuario = new Usuario("Antigo", "111", "antigo@email.com", "5511999999999", new DateTime(1990, 1, 1), null);
 
             _mockRepository.Setup(r => r.BuscarPorIdAsync(id)).ReturnsAsync(usuario);
             _mockRepository.Setup(r => r.ExisteCpfEmOutroUsuarioAsync(id, dto.Cpf)).ReturnsAsync(false);
             _mockRepository.Setup(r => r.ExisteEmailEmOutroUsuarioAsync(id, dto.Email)).ReturnsAsync(false);
 
-            // Act
             await _service.AtualizarAsync(id, dto);
 
-            // Assert
             Assert.Equal(dto.Nome, usuario.Nome);
             Assert.Equal(dto.Cpf, usuario.Cpf);
             _mockRepository.Verify(r => r.UpdateAsync(usuario), Times.Once);
@@ -146,12 +155,10 @@ namespace Library.Tests
         [Fact]
         public async Task AtualizarAsync_DeveLancarExcecao_QuandoUsuarioNaoEncontrado()
         {
-            // Arrange
             var id = 1;
             var dto = new CreateUsuarioDTO();
             _mockRepository.Setup(r => r.BuscarPorIdAsync(id)).ReturnsAsync((Usuario?)null);
 
-            // Act & Assert
             await Assert.ThrowsAsync<NotFoundException>(() => _service.AtualizarAsync(id, dto));
             
             _mockRepository.Verify(r => r.UpdateAsync(It.IsAny<Usuario>()), Times.Never);
@@ -160,15 +167,13 @@ namespace Library.Tests
         [Fact]
         public async Task AtualizarAsync_DeveLancarExcecao_QuandoCpfEmUsoPorOutro()
         {
-            // Arrange
             var id = 1;
             var dto = new CreateUsuarioDTO { Cpf = "12345678900" };
-            var usuario = new Usuario { Id = id, Ativo = true };
+            var usuario = new Usuario("Teste", "111", "email@test.com", "5511999999999", new DateTime(2000, 1, 1), null);
 
             _mockRepository.Setup(r => r.BuscarPorIdAsync(id)).ReturnsAsync(usuario);
             _mockRepository.Setup(r => r.ExisteCpfEmOutroUsuarioAsync(id, dto.Cpf)).ReturnsAsync(true);
 
-            // Act & Assert
             var ex = await Assert.ThrowsAsync<BusinessException>(() => _service.AtualizarAsync(id, dto));
             Assert.Equal("O CPF informado já está em uso por outro usuário.", ex.Message);
         }
@@ -176,15 +181,12 @@ namespace Library.Tests
         [Fact]
         public async Task DesativarAsync_DeveDesativarUsuario_QuandoEncontrado()
         {
-            // Arrange
             var id = 1;
-            var usuario = new Usuario { Id = id, Ativo = true };
+            var usuario = new Usuario("Teste", "111", "email@test.com", "5511999999999", new DateTime(2000, 1, 1), null);
             _mockRepository.Setup(r => r.BuscarPorIdAsync(id)).ReturnsAsync(usuario);
 
-            // Act
             await _service.DesativarAsync(id);
 
-            // Assert
             Assert.False(usuario.Ativo);
             _mockRepository.Verify(r => r.UpdateAsync(usuario), Times.Once);
         }

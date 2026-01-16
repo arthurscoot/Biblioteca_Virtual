@@ -36,8 +36,10 @@ namespace Library.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Nome = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Cpf = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CpfResponsavel = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Email = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Telefone = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    DatadeNascimento = table.Column<DateTime>(type: "datetime2", nullable: false),
                     DatadeCadastro = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Ativo = table.Column<bool>(type: "bit", nullable: false)
                 },
