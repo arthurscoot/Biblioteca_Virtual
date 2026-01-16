@@ -28,7 +28,6 @@ API RESTful para gerenciamento de uma biblioteca virtual, desenvolvida em .NET 8
 
 ##  Como executar Migrations
 
-<<<<<<< HEAD
 O projeto utiliza Entity Framework Core Code-First. Para aplicar as migrações e criar o banco de dados:
 
 1. Navegue até a pasta do projeto principal:
@@ -109,7 +108,6 @@ dotnet test
 ### 📊 Estatísticas (`/api/estatisticas`)
 - **GET** `/top_livros` - Retorna uma lista de livros mais emprestados.
 - **GET** `/top_autores` - Retorna uma lista de autores mais emprestados.
-<<<<<<< HEAD
 
 ## Modelos JSON (Exemplos)
 
