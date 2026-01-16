@@ -1,4 +1,5 @@
 using Library.Data;
+using Library.DTOs;
 using Library.Entities;
 using Library.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -60,5 +61,15 @@ namespace Library.Data.Repositories
             return await _context.Emprestimos
                 .AnyAsync(e => e.LivroId == livroId && e.Ativo);
         }
+
+        public async Task<IEnumerable<Emprestimo>> ListarTodosAtivosAsync()
+        {
+            return await _context.Emprestimos
+                .Include(e => e.Livro)
+                .ThenInclude(l => l.Autor)
+                .Where(e => e.Ativo)
+                .ToListAsync();
+        }
+
     }
 }
