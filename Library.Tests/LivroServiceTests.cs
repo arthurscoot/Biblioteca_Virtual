@@ -5,6 +5,7 @@ using Library.Entities;
 using Library.Interfaces;
 using Library.Services;
 using Moq;
+using System.Reflection;
 using Xunit;
 
 namespace Library.Tests
@@ -31,18 +32,32 @@ namespace Library.Tests
             _mockMapper.Setup(m => m.Map<LivroDTO>(It.IsAny<Livro>()))
                        .Returns((Livro l) => new LivroDTO { Id = l.Id, Titulo = l.Titulo });
             _mockMapper.Setup(m => m.Map<Livro>(It.IsAny<CreateLivroDTO>()))
-                       .Returns((CreateLivroDTO d) => new Livro { Titulo = d.Titulo, ISBN = d.ISBN, AutorId = d.AutorId });
+                       .Returns((CreateLivroDTO d) => new Livro(d.Titulo, d.ISBN, d.AnoPublicacao, d.Categoria, d.QuantidadeEstoque, d.AutorId));
+        }
+
+        private void SetPrivateProperty(object obj, string propertyName, object value)
+        {
+            var prop = obj.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            prop?.SetValue(obj, value);
         }
 
         [Fact]
         public async Task ListarLivrosAsync_DeveRetornarLista_QuandoExistiremLivros()
         {
             // Arrange
+            var autor1 = new Autor("Autor 1", DateTime.Now.AddYears(-20), "BR", "Bio");
+            var autor2 = new Autor("Autor 2", DateTime.Now.AddYears(-20), "US", "Bio");
+
+            var l1 = new Livro("Livro 1", "1234567890", 2020, "Cat", 10, 1);
+            SetPrivateProperty(l1, "Id", 1);
+            l1.AssociarAutor(autor1);
+
+            var l2 = new Livro("Livro 2", "0987654321", 2021, "Cat", 10, 2);
+            SetPrivateProperty(l2, "Id", 2);
+            l2.AssociarAutor(autor2);
+
             var livros = new List<Livro>
-            {
-                new Livro { Id = 1, Titulo = "Livro 1", Autor = new Autor { Nome = "Autor 1" } },
-                new Livro { Id = 2, Titulo = "Livro 2", Autor = new Autor { Nome = "Autor 2" } }
-            };
+            { l1, l2 };
             _mockLivroRepository.Setup(r => r.ListarAsync(null, null)).ReturnsAsync(livros);
 
             // Act
@@ -57,10 +72,10 @@ namespace Library.Tests
         public async Task ListarEmEstoqueAsync_DeveRetornarLivrosComEstoque()
         {
             // Arrange
-            var livros = new List<Livro>
-            {
-                new Livro { Id = 1, Titulo = "Livro 1", QuantidadeEstoque = 5, Autor = new Autor { Nome = "Autor 1" } }
-            };
+            var l1 = new Livro("Livro 1", "1234567890", 2020, "Cat", 5, 1);
+            SetPrivateProperty(l1, "Id", 1);
+            
+            var livros = new List<Livro> { l1 };
             _mockLivroRepository.Setup(r => r.ListarEmEstoqueAsync()).ReturnsAsync(livros);
 
             // Act
@@ -78,11 +93,10 @@ namespace Library.Tests
             int autorId = 1;
             _mockAutorRepository.Setup(r => r.BuscarAtivoPorIdAsync(autorId)).ReturnsAsync((Autor?)null);
 
-            // Act
-            var result = await _service.ListarPorAutor(autorId);
-
-            // Assert
-            Assert.Empty(result);
+            // Act & Assert
+            // O serviço lança NotFoundException quando o autor não existe ou está inativo
+            var ex = await Assert.ThrowsAsync<NotFoundException>(() => _service.ListarPorAutor(autorId));
+            Assert.Equal("Autor não encontrado ou inativo.", ex.Message);
         }
 
         [Fact]
@@ -90,11 +104,12 @@ namespace Library.Tests
         {
             // Arrange
             int autorId = 1;
-            var autor = new Autor { Id = autorId, Ativo = true, Nome = "Autor Teste" };
-            var livros = new List<Livro>
-            {
-                new Livro { Id = 1, Titulo = "Livro 1", AutorId = autorId, Autor = autor }
-            };
+            var autor = new Autor("Autor Teste", DateTime.Now.AddYears(-20), "BR", "Bio");
+            SetPrivateProperty(autor, "Id", autorId);
+            
+            var l1 = new Livro("Livro 1", "1234567890", 2020, "Cat", 5, autorId);
+            l1.AssociarAutor(autor);
+            var livros = new List<Livro> { l1 };
 
             _mockAutorRepository.Setup(r => r.BuscarAtivoPorIdAsync(autorId)).ReturnsAsync(autor);
             _mockLivroRepository.Setup(r => r.ListarPorAutorAsync(autorId)).ReturnsAsync(livros);
@@ -111,7 +126,8 @@ namespace Library.Tests
         {
             // Arrange
             int id = 1;
-            var livro = new Livro { Id = id, Titulo = "Teste", Autor = new Autor { Nome = "Autor" } };
+            var livro = new Livro("Teste", "1234567890", 2020, "Cat", 5, 1);
+            SetPrivateProperty(livro, "Id", id);
             _mockLivroRepository.Setup(r => r.BuscarPorIdAsync(id)).ReturnsAsync(livro);
 
             // Act
@@ -137,8 +153,9 @@ namespace Library.Tests
         public async Task CriarAsync_DeveCriarLivro_QuandoDadosValidos()
         {
             // Arrange
-            var dto = new CreateLivroDTO { Titulo = "Novo Livro", ISBN = "123", AutorId = 1 };
-            var autor = new Autor { Id = 1, Nome = "Autor", Ativo = true };
+            var dto = new CreateLivroDTO { Titulo = "Novo Livro", ISBN = "1234567890", AutorId = 1, Categoria = "Ficção", AnoPublicacao = 2024, QuantidadeEstoque = 5 };
+            var autor = new Autor("Autor", DateTime.Now.AddYears(-20), "BR", "Bio");
+            SetPrivateProperty(autor, "Id", 1);
 
             _mockAutorRepository.Setup(r => r.BuscarAtivoPorIdAsync(dto.AutorId)).ReturnsAsync(autor);
             _mockLivroRepository.Setup(r => r.ExisteIsbnAsync(dto.ISBN)).ReturnsAsync(false);
@@ -168,8 +185,9 @@ namespace Library.Tests
         public async Task CriarAsync_DeveLancarExcecao_QuandoIsbnJaExiste()
         {
             // Arrange
-            var dto = new CreateLivroDTO { ISBN = "123", AutorId = 1 };
-            var autor = new Autor { Id = 1, Ativo = true };
+            var dto = new CreateLivroDTO { ISBN = "1234567890", AutorId = 1 };
+            var autor = new Autor("Autor", DateTime.Now.AddYears(-20), "BR", "Bio");
+            SetPrivateProperty(autor, "Id", 1);
 
             _mockAutorRepository.Setup(r => r.BuscarAtivoPorIdAsync(dto.AutorId)).ReturnsAsync(autor);
             _mockLivroRepository.Setup(r => r.ExisteIsbnAsync(dto.ISBN)).ReturnsAsync(true);
@@ -184,8 +202,9 @@ namespace Library.Tests
         {
             // Arrange
             int id = 1;
-            var dto = new LivroDTO { Id = id, ISBN = "999", AutorId = 1 }; // Changed ISBN
-            var livro = new Livro { Id = id, ISBN = "123", AutorId = 1 };
+            var dto = new LivroDTO { Id = id, ISBN = "9999999999", AutorId = 1 }; // Changed ISBN
+            var livro = new Livro("Titulo", "1234567890", 2020, "Cat", 5, 1);
+            SetPrivateProperty(livro, "Id", id);
 
             _mockLivroRepository.Setup(r => r.BuscarPorIdAsync(id)).ReturnsAsync(livro);
             _mockLivroRepository.Setup(r => r.ExisteIsbnEmOutroLivroAsync(id, dto.ISBN)).ReturnsAsync(true);
@@ -200,7 +219,8 @@ namespace Library.Tests
         {
             // Arrange
             int id = 1;
-            var livro = new Livro { Id = id };
+            var livro = new Livro("Titulo", "1234567890", 2020, "Cat", 5, 1);
+            SetPrivateProperty(livro, "Id", id);
             _mockLivroRepository.Setup(r => r.BuscarPorIdAsync(id)).ReturnsAsync(livro);
             _mockEmprestimoRepository.Setup(r => r.ExisteEmprestimoAtivoPorLivroAsync(id)).ReturnsAsync(false);
 
@@ -216,7 +236,8 @@ namespace Library.Tests
         {
             // Arrange
             int id = 1;
-            var livro = new Livro { Id = id };
+            var livro = new Livro("Titulo", "1234567890", 2020, "Cat", 5, 1);
+            SetPrivateProperty(livro, "Id", id);
             _mockLivroRepository.Setup(r => r.BuscarPorIdAsync(id)).ReturnsAsync(livro);
             _mockEmprestimoRepository.Setup(r => r.ExisteEmprestimoAtivoPorLivroAsync(id)).ReturnsAsync(true);
 
@@ -232,8 +253,10 @@ namespace Library.Tests
             // Arrange
             int id = 1;
             var dto = new LivroDTO { Id = id, Titulo = "Titulo Atualizado", ISBN = "1234567890123", AutorId = 1, AnoPublicacao = 2024, Categoria = "TI", QuantidadeEstoque = 10 };
-            var livro = new Livro { Id = id, Titulo = "Antigo", ISBN = "1234567890123", AutorId = 1 };
-            var autor = new Autor { Id = 1, Ativo = true };
+            var livro = new Livro("Antigo", "1234567890123", 2020, "Cat", 5, 1);
+            SetPrivateProperty(livro, "Id", id);
+            var autor = new Autor("Autor", DateTime.Now.AddYears(-20), "BR", "Bio");
+            SetPrivateProperty(autor, "Id", 1);
 
             _mockLivroRepository.Setup(r => r.BuscarPorIdAsync(id)).ReturnsAsync(livro);
             _mockAutorRepository.Setup(r => r.BuscarAtivoPorIdAsync(dto.AutorId)).ReturnsAsync(autor);

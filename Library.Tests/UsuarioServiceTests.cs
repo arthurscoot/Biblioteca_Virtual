@@ -5,6 +5,7 @@ using Library.Entities;
 using Library.Interfaces;
 using Library.Services;
 using Moq;
+using System.Reflection;
 using Xunit;
 
 namespace Library.Tests
@@ -12,19 +13,35 @@ namespace Library.Tests
     public class UsuarioServiceTests
     {
         private readonly Mock<IUsuarioRepository> _mockRepository;
+        private readonly Mock<IEmprestimoRepository> _mockEmprestimoRepository;
         private readonly Mock<IMapper> _mockMapper;
+        private readonly Mock<TimeProvider> _mockTimeProvider;
         private readonly UsuarioService _service;
 
         public UsuarioServiceTests()
         {
             _mockRepository = new Mock<IUsuarioRepository>();
+            _mockEmprestimoRepository = new Mock<IEmprestimoRepository>();
             _mockMapper = new Mock<IMapper>();
-            _service = new UsuarioService(_mockRepository.Object, _mockMapper.Object);
+            _mockTimeProvider = new Mock<TimeProvider>();
+
+            // Setup TimeProvider
+            var fixedDate = new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero);
+            _mockTimeProvider.Setup(x => x.GetUtcNow()).Returns(fixedDate);
+            _mockTimeProvider.Setup(x => x.LocalTimeZone).Returns(TimeZoneInfo.Utc);
+
+            _service = new UsuarioService(_mockRepository.Object, _mockEmprestimoRepository.Object, _mockMapper.Object, _mockTimeProvider.Object);
 
             _mockMapper.Setup(m => m.Map<UsuarioDTO>(It.IsAny<Usuario>()))
                        .Returns((Usuario u) => new UsuarioDTO { Nome = u.Nome, Cpf = u.Cpf, Email = u.Email });
             _mockMapper.Setup(m => m.Map<IEnumerable<UsuarioDTO>>(It.IsAny<IEnumerable<Usuario>>()))
                        .Returns((IEnumerable<Usuario> src) => src.Select(u => new UsuarioDTO { Nome = u.Nome }));
+        }
+
+        private void SetPrivateProperty(object obj, string propertyName, object value)
+        {
+            var prop = obj.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            prop?.SetValue(obj, value);
         }
 
         [Fact]
@@ -91,10 +108,11 @@ namespace Library.Tests
         [Fact]
         public async Task ListarAtivosAsync_DeveRetornarListaDeUsuarios()
         {
+            var now = _mockTimeProvider.Object.GetLocalNow().DateTime;
             var usuarios = new List<Usuario>
             {
-                new Usuario("User 1", "11111111111", "email1@test.com", "5511999999999", new DateTime(2000, 1, 1), null),
-                new Usuario("User 2", "22222222222", "email2@test.com", "5511999999999", new DateTime(2000, 1, 1), null)
+                new Usuario("User 1", "11111111111", "email1@test.com", "5511999999999", new DateTime(2000, 1, 1), null, now),
+                new Usuario("User 2", "22222222222", "email2@test.com", "5511999999999", new DateTime(2000, 1, 1), null, now)
             };
             _mockRepository.Setup(r => r.ListarAtivosAsync()).ReturnsAsync(usuarios);
 
@@ -108,7 +126,7 @@ namespace Library.Tests
         public async Task BuscarPorCpfAsync_DeveRetornarUsuario_QuandoEncontrado()
         {
             var cpf = "12345678900";
-            var usuario = new Usuario("Teste", cpf, "email@test.com", "5511999999999", new DateTime(2000, 1, 1), null);
+            var usuario = new Usuario("Teste", cpf, "email@test.com", "5511999999999", new DateTime(2000, 1, 1), null, DateTime.Now);
             _mockRepository.Setup(r => r.BuscarPorCpfAsync(cpf)).ReturnsAsync(usuario);
 
             var result = await _service.BuscarPorCpfAsync(cpf);
@@ -138,8 +156,8 @@ namespace Library.Tests
                 Telefone = "55 (11) 88888-8888",
                 DataNascimento = new DateTime(2000, 1, 1)
             };
-            // Instanciando via construtor (Id será 0, mas o mock retorna este objeto quando solicitado)
-            var usuario = new Usuario("Antigo", "111", "antigo@email.com", "5511999999999", new DateTime(1990, 1, 1), null);
+            
+            var usuario = new Usuario("Antigo", "111", "antigo@email.com", "5511999999999", new DateTime(1990, 1, 1), null, DateTime.Now);
 
             _mockRepository.Setup(r => r.BuscarPorIdAsync(id)).ReturnsAsync(usuario);
             _mockRepository.Setup(r => r.ExisteCpfEmOutroUsuarioAsync(id, dto.Cpf)).ReturnsAsync(false);
@@ -169,7 +187,7 @@ namespace Library.Tests
         {
             var id = 1;
             var dto = new CreateUsuarioDTO { Cpf = "12345678900" };
-            var usuario = new Usuario("Teste", "111", "email@test.com", "5511999999999", new DateTime(2000, 1, 1), null);
+            var usuario = new Usuario("Teste", "111", "email@test.com", "5511999999999", new DateTime(2000, 1, 1), null, DateTime.Now);
 
             _mockRepository.Setup(r => r.BuscarPorIdAsync(id)).ReturnsAsync(usuario);
             _mockRepository.Setup(r => r.ExisteCpfEmOutroUsuarioAsync(id, dto.Cpf)).ReturnsAsync(true);
@@ -182,8 +200,11 @@ namespace Library.Tests
         public async Task DesativarAsync_DeveDesativarUsuario_QuandoEncontrado()
         {
             var id = 1;
-            var usuario = new Usuario("Teste", "111", "email@test.com", "5511999999999", new DateTime(2000, 1, 1), null);
+            var usuario = new Usuario("Teste", "111", "email@test.com", "5511999999999", new DateTime(2000, 1, 1), null, DateTime.Now);
             _mockRepository.Setup(r => r.BuscarPorIdAsync(id)).ReturnsAsync(usuario);
+            
+            _mockEmprestimoRepository.Setup(r => r.ListarAtivosPorUsuarioAsync(id)).ReturnsAsync(new List<Emprestimo>());
+            _mockEmprestimoRepository.Setup(r => r.PossuiMultaPendenteAsync(id)).ReturnsAsync(false);
 
             await _service.DesativarAsync(id);
 

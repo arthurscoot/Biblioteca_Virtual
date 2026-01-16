@@ -12,5 +12,7 @@ namespace Library.Interfaces
         Task<bool> PossuiMultaPendenteAsync(int usuarioId);
         Task<bool> ExisteEmprestimoAtivoPorLivroAsync(int livroId);
         Task<IEnumerable<Emprestimo>> ListarTodosAtivosAsync();
+        Task<IEnumerable<Emprestimo>> ListarComMultasPendentesAsync();
+        Task<IEnumerable<Usuario>> ListarUsuariosComEmprestimosAtrasadosAsync();
     }
 }

@@ -61,7 +61,7 @@ namespace Library.Entities
 
         public void AssociarAutor(Autor autor)
         {
-            Autor = autor;
+            Autor = autor ?? throw new ValidationException("Autor inválido.");
         }
 
         private void Validar(string titulo, string isbn, int anoPublicacao, string categoria, int quantidadeEstoque, int autorId)
@@ -71,6 +71,7 @@ namespace Library.Entities
             if (isbn.Length < 10 || isbn.Length > 13) throw new ValidationException("O ISBN deve ter entre 10 e 13 caracteres.");
             if (string.IsNullOrWhiteSpace(categoria)) throw new ValidationException("A categoria é obrigatória.");
             if (anoPublicacao <= 0) throw new ValidationException("Ano de publicação inválido.");
+             if (anoPublicacao > DateTime.Now.Year) throw new ValidationException("O ano de publicação não pode ser uma data futura.");
             if (quantidadeEstoque < 0) throw new ValidationException("A quantidade em estoque não pode ser negativa.");
             if (autorId <= 0) throw new ValidationException("ID do autor inválido.");
         }

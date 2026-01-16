@@ -1,9 +1,11 @@
+using AutoMapper;
 using Domain.Exceptions;
 using Library.DTOs;
 using Library.Entities;
 using Library.Interfaces;
 using Library.Services;
 using Moq;
+using System.Reflection;
 using Xunit;
 
 namespace Library.Tests
@@ -14,6 +16,7 @@ namespace Library.Tests
         private readonly Mock<IUsuarioRepository> _mockUsuarioRepository;
         private readonly Mock<ILivroRepository> _mockLivroRepository;
         private readonly Mock<TimeProvider> _mockTimeProvider;
+        private readonly Mock<IMapper> _mockMapper;
         private readonly EmprestimoService _service;
 
         public EmprestimoServiceTests()
@@ -22,6 +25,7 @@ namespace Library.Tests
             _mockUsuarioRepository = new Mock<IUsuarioRepository>();
             _mockLivroRepository = new Mock<ILivroRepository>();
             _mockTimeProvider = new Mock<TimeProvider>();
+            _mockMapper = new Mock<IMapper>();
 
             // Configura data fixa para testes (01/01/2024)
             var fixedDate = new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero);
@@ -32,8 +36,21 @@ namespace Library.Tests
                 _mockEmprestimoRepository.Object,
                 _mockTimeProvider.Object,
                 _mockUsuarioRepository.Object,
-                _mockLivroRepository.Object
+                _mockLivroRepository.Object,
+                _mockMapper.Object
             );
+
+            _mockMapper.Setup(m => m.Map<EmprestimoDTO>(It.IsAny<Emprestimo>()))
+                .Returns((Emprestimo e) => new EmprestimoDTO { Id = e.Id, UsuarioId = e.UsuarioId, LivroId = e.LivroId, Ativo = e.Ativo });
+
+            _mockMapper.Setup(m => m.Map<IEnumerable<EmprestimoDTO>>(It.IsAny<IEnumerable<Emprestimo>>()))
+                .Returns((IEnumerable<Emprestimo> src) => src.Select(e => new EmprestimoDTO { Id = e.Id, UsuarioId = e.UsuarioId, LivroId = e.LivroId, Ativo = e.Ativo }));
+        }
+
+        private void SetPrivateProperty(object obj, string propertyName, object value)
+        {
+            var prop = obj.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            prop?.SetValue(obj, value);
         }
 
         [Fact]
@@ -41,8 +58,12 @@ namespace Library.Tests
         {
             // Arrange
             var dto = new CreateEmprestimoDTO { UsuarioId = 1, LivroId = 1 };
-            var usuario = new Usuario { Id = 1, Ativo = true };
-            var livro = new Livro { Id = 1, QuantidadeEstoque = 5 };
+            
+            var usuario = new Usuario("Teste", "123", "email", "123", DateTime.Now.AddYears(-20), null, DateTime.Now);
+            SetPrivateProperty(usuario, "Id", 1);
+
+            var livro = new Livro("Titulo", "1234567890", 2020, "Cat", 5, 1);
+            SetPrivateProperty(livro, "Id", 1);
 
             _mockUsuarioRepository.Setup(r => r.BuscarPorIdAsync(dto.UsuarioId)).ReturnsAsync(usuario);
             _mockEmprestimoRepository.Setup(r => r.PossuiMultaPendenteAsync(dto.UsuarioId)).ReturnsAsync(false);
@@ -65,8 +86,11 @@ namespace Library.Tests
         {
             // Arrange
             var dto = new CreateEmprestimoDTO { UsuarioId = 1, LivroId = 1 };
-            var usuario = new Usuario { Id = 1, Ativo = true };
-            var livro = new Livro { Id = 1, QuantidadeEstoque = 0 }; // Sem estoque
+            
+            var usuario = new Usuario("Teste", "123", "email", "123", DateTime.Now.AddYears(-20), null, DateTime.Now);
+            SetPrivateProperty(usuario, "Id", 1);
+            
+            var livro = new Livro("Titulo", "1234567890", 2020, "Cat", 0, 1); // Sem estoque
 
             _mockUsuarioRepository.Setup(r => r.BuscarPorIdAsync(dto.UsuarioId)).ReturnsAsync(usuario);
             _mockLivroRepository.Setup(r => r.BuscarPorIdAsync(dto.LivroId)).ReturnsAsync(livro);
@@ -81,14 +105,12 @@ namespace Library.Tests
         {
             // Arrange
             int emprestimoId = 1;
-            var emprestimo = new Emprestimo 
-            { 
-                Id = emprestimoId, 
-                Ativo = true, 
-                LivroId = 1, 
-                DataPrevistaDevolucao = new DateTime(2024, 1, 10) 
-            };
-            var livro = new Livro { Id = 1, QuantidadeEstoque = 0 };
+            var emprestimo = new Emprestimo(1, 1, new DateTime(2023, 12, 25));
+            SetPrivateProperty(emprestimo, "Id", emprestimoId);
+            // DataPrevistaDevolucao será 2024-01-08 (14 dias depois)
+
+            var livro = new Livro("Titulo", "1234567890", 2020, "Cat", 0, 1);
+            SetPrivateProperty(livro, "Id", 1);
 
             _mockEmprestimoRepository.Setup(r => r.BuscarPorIdAsync(emprestimoId)).ReturnsAsync(emprestimo);
             _mockLivroRepository.Setup(r => r.BuscarPorIdAsync(emprestimo.LivroId)).ReturnsAsync(livro);
@@ -108,13 +130,10 @@ namespace Library.Tests
             // Arrange
             int emprestimoId = 1;
             var dataPrevistaOriginal = new DateTime(2024, 1, 10); // Futuro em relação ao mock time (01/01/2024)
-            var emprestimo = new Emprestimo 
-            { 
-                Id = emprestimoId, 
-                Ativo = true, 
-                Renovado = false, 
-                DataPrevistaDevolucao = dataPrevistaOriginal 
-            };
+            
+            var emprestimo = new Emprestimo(1, 1, new DateTime(2023, 12, 27)); // +14 dias = 10/01/2024
+            SetPrivateProperty(emprestimo, "Id", emprestimoId);
+            // DataPrevistaDevolucao calculada no construtor
 
             _mockEmprestimoRepository.Setup(r => r.BuscarPorIdAsync(emprestimoId)).ReturnsAsync(emprestimo);
 
@@ -131,7 +150,9 @@ namespace Library.Tests
         {
             // Arrange
             int usuarioId = 1;
-            var lista = new List<Emprestimo> { new Emprestimo { Id = 1, UsuarioId = usuarioId, Ativo = true } };
+            var emp = new Emprestimo(usuarioId, 1, DateTime.Now);
+            SetPrivateProperty(emp, "Id", 1);
+            var lista = new List<Emprestimo> { emp };
             _mockEmprestimoRepository.Setup(r => r.ListarAtivosPorUsuarioAsync(usuarioId)).ReturnsAsync(lista);
 
             // Act

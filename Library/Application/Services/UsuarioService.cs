@@ -9,12 +9,16 @@ namespace Library.Services
     public class UsuarioService : IUsuarioService
     {
         private readonly IUsuarioRepository _repository;
+        private readonly IEmprestimoRepository _emprestimoRepository;
         private readonly IMapper _mapper;
+        private readonly TimeProvider _timeProvider;
 
-        public UsuarioService(IUsuarioRepository repository, IMapper mapper)
+        public UsuarioService(IUsuarioRepository repository, IEmprestimoRepository emprestimoRepository, IMapper mapper, TimeProvider timeProvider)
         {
             _repository = repository;
+            _emprestimoRepository = emprestimoRepository;
             _mapper = mapper;
+            _timeProvider = timeProvider;
         }
 
         public async Task<UsuarioDTO> CriarAsync(CreateUsuarioDTO dto)
@@ -31,7 +35,8 @@ namespace Library.Services
                 dto.Email,
                 dto.Telefone,
                 dto.DataNascimento,
-                dto.CpfResponsavel
+                dto.CpfResponsavel,
+                _timeProvider.GetLocalNow().DateTime
             );
 
             await _repository.AddAsync(usuario);
@@ -80,6 +85,13 @@ namespace Library.Services
 
             if (usuario == null || !usuario.Ativo)
                 throw new NotFoundException("Usuário não encontrado ou já está inativo.");
+
+            var emprestimosAtivos = await _emprestimoRepository.ListarAtivosPorUsuarioAsync(id);
+            if (emprestimosAtivos.Any())
+                throw new BusinessException("Não é possível desativar o usuário pois existem empréstimos ativos.");
+
+            if (await _emprestimoRepository.PossuiMultaPendenteAsync(id))
+                throw new BusinessException("Não é possível desativar o usuário pois existem multas pendentes.");
 
             usuario.Desativar();
 

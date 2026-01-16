@@ -21,10 +21,7 @@ namespace Library.Controllers
         [HttpGet]
         public async Task<IActionResult> Listar([FromQuery] string? titulo, [FromQuery] string? isbn)
         {
-    
-#pragma warning disable CS8604 // Possible null reference argument.
             var livros = await _livroService.ListarLivrosAsync(titulo, isbn);
-#pragma warning restore CS8604 // Possible null reference argument.
             return Ok(livros);
         }
 
@@ -54,7 +51,6 @@ namespace Library.Controllers
         {
             var livroCriado = await _livroService.CriarAsync(dto);
 
-            // Retorna 201 Created com a localização do novo recurso e o objeto criado.
             return CreatedAtAction(
                 nameof(BuscarPorId),
                 new { id = livroCriado.Id },
@@ -66,7 +62,14 @@ namespace Library.Controllers
         public async Task<IActionResult> Atualizar(int id, [FromBody] LivroDTO dto)
         {
             await _livroService.AtualizarAsync(id, dto);
-            return NoContent(); // 204
+            return NoContent(); 
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Remover(int id)
+        {
+            await _livroService.RemoverAsync(id);
+            return NoContent();
         }
 
 }}

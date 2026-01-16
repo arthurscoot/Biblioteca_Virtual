@@ -5,6 +5,7 @@ using Library.Entities;
 using Library.Interfaces;
 using Library.Services;
 using Moq;
+using System.Reflection;
 using Xunit;
 
 namespace Library.Tests
@@ -23,7 +24,7 @@ namespace Library.Tests
 
             // Setup básico do Mapper para evitar erros de referência nula nos testes
             _mockMapper.Setup(m => m.Map<Autor>(It.IsAny<CreateAutorDto>()))
-                       .Returns((CreateAutorDto d) => new Autor { Nome = d.Nome, DataNascimento = d.DataNascimento, PaisOrigem = d.PaisOrigem, Biografia = d.Biografia });
+                       .Returns((CreateAutorDto d) => new Autor(d.Nome, d.DataNascimento, d.PaisOrigem, d.Biografia));
 
             _mockMapper.Setup(m => m.Map<AutorDto>(It.IsAny<Autor>()))
                        .Returns((Autor a) => new AutorDto { Id = a.Id, Nome = a.Nome, PaisOrigem = a.PaisOrigem });
@@ -32,15 +33,23 @@ namespace Library.Tests
                        .Returns((IEnumerable<Autor> src) => src.Select(a => new AutorDto { Id = a.Id, Nome = a.Nome, PaisOrigem = a.PaisOrigem }));
         }
 
+        private void SetPrivateProperty(object obj, string propertyName, object value)
+        {
+            var prop = obj.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            prop?.SetValue(obj, value);
+        }
+
         [Fact]
         public async Task ListarAsync_DeveRetornarListaDeAutores()
         {
             // Arrange
-            var autores = new List<Autor>
-            {
-                new Autor { Id = 1, Nome = "Autor 1", PaisOrigem = "Brasil", Ativo = true },
-                new Autor { Id = 2, Nome = "Autor 2", PaisOrigem = "EUA", Ativo = true }
-            };
+            var a1 = new Autor("Autor 1", DateTime.Now.AddYears(-20), "Brasil", "Bio");
+            SetPrivateProperty(a1, "Id", 1);
+
+            var a2 = new Autor("Autor 2", DateTime.Now.AddYears(-20), "EUA", "Bio");
+            SetPrivateProperty(a2, "Id", 2);
+
+            var autores = new List<Autor> { a1, a2 };
             _mockRepository.Setup(r => r.ListarPorPageTamanhoAsync(1, 10)).ReturnsAsync(autores);
 
             // Act
@@ -55,7 +64,8 @@ namespace Library.Tests
         public async Task BuscarPorIdAsync_DeveRetornarAutor_QuandoEncontradoEAtivo()
         {
             // Arrange
-            var autor = new Autor { Id = 1, Nome = "Autor Teste", Ativo = true };
+            var autor = new Autor("Autor Teste", DateTime.Now.AddYears(-20), "BR", "Bio");
+            SetPrivateProperty(autor, "Id", 1);
             _mockRepository.Setup(r => r.BuscarAtivoPorIdAsync(1)).ReturnsAsync(autor);
 
             // Act
@@ -80,7 +90,9 @@ namespace Library.Tests
         public async Task BuscarPorIdAsync_DeveLancarExcecao_QuandoInativo()
         {
             // Arrange
-            var autor = new Autor { Id = 1, Nome = "Autor Inativo", Ativo = false };
+            var autor = new Autor("Autor Inativo", DateTime.Now.AddYears(-20), "BR", "Bio");
+            SetPrivateProperty(autor, "Id", 1);
+            autor.Desativar();
             _mockRepository.Setup(r => r.BuscarAtivoPorIdAsync(1)).ReturnsAsync(autor);
 
             // Act & Assert
@@ -113,7 +125,7 @@ namespace Library.Tests
         public async Task CriarAsync_DeveLancarExcecao_QuandoDataNascimentoNoFuturo()
         {
             // Arrange
-            var dto = new CreateAutorDto { Nome = "Futuro", DataNascimento = DateTime.Today.AddDays(1) };
+            var dto = new CreateAutorDto { Nome = "Futuro", DataNascimento = DateTime.Today.AddDays(1), PaisOrigem = "BR" };
 
             // Act & Assert
             var ex = await Assert.ThrowsAsync<ValidationException>(() => _service.CriarAsync(dto));
@@ -124,10 +136,10 @@ namespace Library.Tests
         public async Task CriarAsync_DeveLancarExcecao_QuandoMenorDe16Anos()
         {
             // Arrange
-            var dto = new CreateAutorDto { Nome = "Jovem", DataNascimento = DateTime.Today.AddYears(-15) };
+            var dto = new CreateAutorDto { Nome = "Jovem", DataNascimento = DateTime.Today.AddYears(-15), PaisOrigem = "BR" };
 
             // Act & Assert
-            var ex = await Assert.ThrowsAsync<BusinessException>(() => _service.CriarAsync(dto));
+            var ex = await Assert.ThrowsAsync<ValidationException>(() => _service.CriarAsync(dto));
             Assert.Equal("O autor deve ter no mínimo 16 anos.", ex.Message);
         }
 
@@ -148,8 +160,9 @@ namespace Library.Tests
         {
             // Arrange
             var id = 1;
-            var dto = new CreateAutorDto { Nome = "Atualizado", DataNascimento = DateTime.Today.AddYears(-25) };
-            var autor = new Autor { Id = id, Nome = "Antigo", Ativo = true };
+            var dto = new CreateAutorDto { Nome = "Atualizado", DataNascimento = DateTime.Today.AddYears(-25), PaisOrigem = "Brasil" };
+            var autor = new Autor("Antigo", DateTime.Now.AddYears(-20), "BR", "Bio");
+            SetPrivateProperty(autor, "Id", id);
 
             _mockRepository.Setup(r => r.BuscarAtivoPorIdAsync(id)).ReturnsAsync(autor);
 
@@ -166,7 +179,8 @@ namespace Library.Tests
         {
             // Arrange
             var id = 1;
-            var autor = new Autor { Id = id, Ativo = true };
+            var autor = new Autor("Autor", DateTime.Now.AddYears(-20), "BR", "Bio");
+            SetPrivateProperty(autor, "Id", id);
             _mockRepository.Setup(r => r.BuscarAtivoPorIdAsync(id)).ReturnsAsync(autor);
 
             // Act

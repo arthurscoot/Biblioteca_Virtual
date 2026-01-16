@@ -30,31 +30,31 @@ namespace Library.Entities
         
         protected Emprestimo() { }
 
-        public Emprestimo(int usuarioId, int livroId)
+        public Emprestimo(int usuarioId, int livroId, DateTime dataEmprestimo)
         {
             UsuarioId = usuarioId;
             LivroId = livroId;
-            DataEmprestimo = DateTime.Now; 
+            DataEmprestimo = dataEmprestimo; 
             DataPrevistaDevolucao = DataEmprestimo.AddDays(14);
             Ativo = true;
             Renovado = false;
         }
 
-        public void Renovar()
+        public void Renovar(DateTime dataRenovacao)
         {
             if (!Ativo) throw new ValidationException("Empréstimo já finalizado não pode ser renovado.");
             if (Renovado) throw new ValidationException("Empréstimo já foi renovado uma vez.");
-            if (DateTime.Now > DataPrevistaDevolucao) throw new ValidationException("Não é possível renovar um empréstimo em atraso.");
+            if (dataRenovacao > DataPrevistaDevolucao) throw new ValidationException("Não é possível renovar um empréstimo em atraso.");
 
             DataPrevistaDevolucao = DataPrevistaDevolucao.AddDays(14);
             Renovado = true;
         }
 
-        public void Devolver()
+        public void Devolver(DateTime dataDevolucao)
         {
             if (!Ativo) throw new ValidationException("Empréstimo já foi devolvido.");
 
-            DataDevolucaoReal = DateTime.Now;
+            DataDevolucaoReal = dataDevolucao;
             Ativo = false;
             CalcularMulta();
         }

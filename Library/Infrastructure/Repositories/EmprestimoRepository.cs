@@ -9,10 +9,12 @@ namespace Library.Data.Repositories
     public class EmprestimoRepository : IEmprestimoRepository
     {
         private readonly AppDbContext _context;
+        private readonly TimeProvider _timeProvider;
 
-        public EmprestimoRepository(AppDbContext context)
+        public EmprestimoRepository(AppDbContext context, TimeProvider timeProvider)
         {
             _context = context;
+            _timeProvider = timeProvider;
         }
 
         public async Task AddAsync(Emprestimo emprestimo)
@@ -71,5 +73,22 @@ namespace Library.Data.Repositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<Emprestimo>> ListarComMultasPendentesAsync()
+        {
+            return await _context.Emprestimos
+                .Where(e => e.ValorMulta > e.ValorMultaPaga)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Usuario>> ListarUsuariosComEmprestimosAtrasadosAsync()
+        {
+            var now = _timeProvider.GetLocalNow().DateTime;
+            return await _context.Emprestimos
+                .Include(e => e.Usuario)
+                .Where(e => e.Ativo && e.DataPrevistaDevolucao < now)
+                .Select(e => e.Usuario)
+                .Distinct()
+                .ToListAsync();
+        }
     }
 }

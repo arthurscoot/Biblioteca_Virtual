@@ -9,9 +9,9 @@
   "nome": "",
   "cpf": "",
   "cpfResponsavel": "", (caso exista um responsável)
-  "dataNascimento": "0001-01-01",
   "email": "",
   "telefone": "00 (00) 00000-0000"
+  "dataNascimento": "0001-01-01",
 }
 
 ### ✍️ Autor — Criação
@@ -61,6 +61,7 @@
 - **GET** `/estoque` - Lista livros disponíveis em estoque.
 - **POST** `/` - Cadastra um novo livro.
 - **PUT** `/{id}` - Atualiza um livro.
+- **DELETE** `/{id}` - Deleta um livro.
 
 ### 🔄 Empréstimos (`/api/emprestimos`)
 - **POST** `/` - Realiza um novo empréstimo.
@@ -70,4 +71,10 @@
 - **GET** `/{usuarioId}/ativos` - Lista empréstimos ativos de um usuário.
 - **GET** `/{usuarioId}/historico` - Lista histórico de empréstimos de um usuário.
 
+### 🧾 Relatórios (`/api/relatorios`)
+- **GET** `/multas_pendentes` - Calcula o total a receber de multas pendentes.
+- **GET** `/usuarios_atrasados` - Lista usuários com empréstimos atrasados.
 
+### 📊 Estatísticas (`/api/estatisticas`)
+- **GET** `/top_livros` - Retorna uma lista de livros mais emprestados.
+- **GET** `/top_autores` - Retorna uma lista de autores mais emprestados.

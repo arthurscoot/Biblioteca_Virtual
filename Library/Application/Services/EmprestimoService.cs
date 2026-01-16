@@ -39,7 +39,7 @@ public class EmprestimoService : IEmprestimoService
 
         if (emprestimo == null) throw new NotFoundException("Empréstimo não encontrado.");
 
-         emprestimo.Devolver();
+         emprestimo.Devolver(_timeProvider.GetLocalNow().DateTime);
 
         var livro = await _livroRepository.BuscarPorIdAsync(emprestimo.LivroId);
         if (livro != null)
@@ -92,7 +92,7 @@ public class EmprestimoService : IEmprestimoService
         livro.BaixarEstoque();
         await _livroRepository.UpdateAsync(livro);
 
-        var emprestimo = new Emprestimo(dto.UsuarioId, dto.LivroId);
+        var emprestimo = new Emprestimo(dto.UsuarioId, dto.LivroId, _timeProvider.GetLocalNow().DateTime);
 
         await _emprestimoRepository.AddAsync(emprestimo);
 
@@ -104,7 +104,7 @@ public class EmprestimoService : IEmprestimoService
         var emprestimo = await _emprestimoRepository.BuscarPorIdAsync(emprestimoId);
         if (emprestimo == null) throw new NotFoundException("Empréstimo não encontrado.");
 
-        emprestimo.Renovar();
+        emprestimo.Renovar(_timeProvider.GetLocalNow().DateTime);
         await _emprestimoRepository.UpdateAsync(emprestimo);
     }
 }

@@ -26,9 +26,9 @@ namespace Library.Entities
     
         protected Usuario() { }
 
-        public Usuario(string nome, string cpf, string email, string telefone, DateTime dataNascimento, string? cpfResponsavel)
+        public Usuario(string nome, string cpf, string email, string telefone, DateTime dataNascimento, string? cpfResponsavel, DateTime dataAtual)
         {
-            ValidarRegrasDeCriacao(nome, cpf, email, dataNascimento, cpfResponsavel);
+            ValidarRegrasDeCriacao(nome, cpf, email, dataNascimento, cpfResponsavel, dataAtual);
 
             Nome = nome;
             Cpf = cpf;
@@ -36,7 +36,7 @@ namespace Library.Entities
             Telefone = telefone;
             DatadeNascimento = dataNascimento;
             CpfResponsavel = cpfResponsavel ?? string.Empty;
-            DatadeCadastro = DateTime.UtcNow;
+            DatadeCadastro = dataAtual;
             Ativo = true;
         }
 
@@ -45,6 +45,15 @@ namespace Library.Entities
         {
             if (!Ativo) throw new ValidationException("Não é possível atualizar um usuário inativo.");
             
+            if (string.IsNullOrWhiteSpace(nome))
+                throw new ValidationException("Nome é obrigatório.");
+
+            if (string.IsNullOrWhiteSpace(cpf))
+                throw new ValidationException("CPF é obrigatório.");
+
+            if (string.IsNullOrWhiteSpace(email))
+                throw new ValidationException("E-mail é obrigatório.");
+
             Nome = nome;
             Cpf = cpf;
             Email = email;
@@ -57,13 +66,13 @@ namespace Library.Entities
             Ativo = false;
         }
 
-        private void ValidarRegrasDeCriacao(string nome, string cpf, string email, DateTime nascimento, string? cpfResponsavel)
+        private void ValidarRegrasDeCriacao(string nome, string cpf, string email, DateTime nascimento, string? cpfResponsavel, DateTime dataAtual)
         {
             if (string.IsNullOrWhiteSpace(nome)) throw new ValidationException("Nome é obrigatório.");
             if (string.IsNullOrWhiteSpace(cpf)) throw new ValidationException("CPF é obrigatório.");
             if (string.IsNullOrWhiteSpace(email)) throw new ValidationException("E-mail é obrigatório.");
 
-            var hoje = DateTime.Today;
+            var hoje = dataAtual.Date;
             var idade = hoje.Year - nascimento.Year;
             if (nascimento.Date > hoje.AddYears(-idade)) idade--;
 

@@ -31,6 +31,7 @@ builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IEmprestimoRepository, EmprestimoRepository>();
 builder.Services.AddScoped<IEmprestimoService, EmprestimoService>();
 builder.Services.AddScoped<IEstatisticaService, EstatisticaService>();
+builder.Services.AddScoped<IRelatorioService, RelatorioService>();
 
 var app = builder.Build();
 

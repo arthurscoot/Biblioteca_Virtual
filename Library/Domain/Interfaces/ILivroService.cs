@@ -6,7 +6,7 @@ namespace Library.Interfaces
 {
     public interface ILivroService
     {
-        Task<IEnumerable<LivroDTO>> ListarLivrosAsync(String titulo, String isbn);
+        Task<IEnumerable<LivroDTO>> ListarLivrosAsync(string? titulo, string? isbn);
         Task<IEnumerable<LivroDTO>> ListarEmEstoqueAsync();
         Task<IEnumerable<LivroDTO>> ListarPorAutor(int autorId);
         Task<LivroDTO> BuscarPorIdAsync(int id);

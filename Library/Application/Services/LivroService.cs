@@ -39,7 +39,7 @@ public class LivroService : ILivroService
 
         if (autor == null || !autor.Ativo)
         {
-            return Enumerable.Empty<LivroDTO>();
+            throw new NotFoundException("Autor não encontrado ou inativo.");
         }
 
         var livros = await _livroRepository.ListarPorAutorAsync(autorId);
@@ -50,12 +50,7 @@ public class LivroService : ILivroService
 
      public async Task<LivroDTO> BuscarPorIdAsync(int id)
     {
-        var livro = await _livroRepository.BuscarPorIdAsync(id);
-
-        if (livro == null)
-        {
-            throw new NotFoundException("Livro não encontrado.");
-        }
+        var livro = await _livroRepository.BuscarPorIdAsync(id) ?? throw new NotFoundException("Livro não encontrado.");
 
         return _mapper.Map<LivroDTO>(livro);
     }
@@ -76,17 +71,15 @@ public class LivroService : ILivroService
 
     public async Task<LivroDTO> CriarAsync(CreateLivroDTO dto) {
         var autor = await _autorRepository.BuscarAtivoPorIdAsync(dto.AutorId);
-        if (autor == null || !autor.Ativo)
-        {
-            throw new NotFoundException("Autor não encontrado ou inativo.");
-        }
-
+        
         var livroExistente = await _livroRepository.ExisteIsbnAsync(dto.ISBN);
+
         if (livroExistente)
-        {
-    
-            throw new BusinessException("Já existe um livro com este ISBN.");
-        }
+        throw new BusinessException("Já existe um livro com este ISBN.");
+        
+
+        if (autor == null)
+        throw new NotFoundException("Autor não encontrado ou inativo.");
 
         var novoLivro = new Livro(
             dto.Titulo,
@@ -135,19 +128,11 @@ public class LivroService : ILivroService
 
     public async Task RemoverAsync(int id)
     {
-        var livro = await _livroRepository.BuscarPorIdAsync(id);
-        if (livro == null) throw new NotFoundException("Livro não encontrado.");
+        var livro = await _livroRepository.BuscarPorIdAsync(id) ?? throw new NotFoundException("Livro não encontrado.");
 
         if (await _emprestimoRepository.ExisteEmprestimoAtivoPorLivroAsync(id))
             throw new BusinessException("Não é possível remover o livro pois existem empréstimos ativos.");
 
         await _livroRepository.DeleteAsync(livro);
-    }
-
-
-    public async Task<IEnumerable<LivroDTO>> ListarTodosAsync(string titulo, string isbn)
-    {
-        var livros = await _livroRepository.ListarAsync(titulo, isbn);
-        return _mapper.Map<IEnumerable<LivroDTO>>(livros);
     }
 }

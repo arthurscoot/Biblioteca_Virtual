@@ -22,7 +22,6 @@ namespace Library.Controllers
         {
             var usuarioCriado = await _usuarioService.CriarAsync(dto);
 
-            // Retorna 201 Created com a localização do novo recurso e o objeto criado.
             return CreatedAtAction(
                 nameof(BuscarPorCpf),
                 new { cpf = usuarioCriado.Cpf },
@@ -53,7 +52,7 @@ namespace Library.Controllers
         public async Task<IActionResult> Atualizar(int id, [FromBody] CreateUsuarioDTO dto)
         {
             await _usuarioService.AtualizarAsync(id, dto);
-            return NoContent(); // Sucesso, sem conteúdo para retornar.
+            return NoContent(); 
         }
 
         [HttpDelete("{id}")]
