@@ -66,6 +66,8 @@
 - **POST** `/` - Realiza um novo empréstimo.
 - **PUT** `/{id}/devolver` - Realiza a devolução de um livro.
 - **PUT** `/{id}/renovar` - Renova o prazo de um empréstimo.
+- **GET** `/{id}` - Busca um emprestimo pelo ID.
 - **GET** `/{usuarioId}/ativos` - Lista empréstimos ativos de um usuário.
 - **GET** `/{usuarioId}/historico` - Lista histórico de empréstimos de um usuário.
+
 
