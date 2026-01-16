@@ -70,7 +70,6 @@ dotnet test
 ## 📖 Endpoints da API
 =======
 ## Este segmento reúne os EndPoints disponiveis.
->>>>>>> c6ef4bad76a220cb416a586ddede5bd0366b704e
 
 ### 👤 Usuários (`/api/usuarios`)
 - **GET** `/` - Lista os usuários ativos.
@@ -168,4 +167,4 @@ Usuário menor de 16 anos:
 }
 ```
 =======
->>>>>>> c6ef4bad76a220cb416a586ddede5bd0366b704e
+
