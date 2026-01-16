@@ -52,9 +52,9 @@ cd ..
 cd .\Library.Tests\
  ```
 2. Execute os testes:
-   ```bash
-   dotnet test
-   ```
+```bash
+dotnet test
+ ```
 
 ## 🛠 Decisões Técnicas
 
