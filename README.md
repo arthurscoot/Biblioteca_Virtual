@@ -38,7 +38,7 @@
   "livroId": 0
 }
 
-## Este segmento reune os EndPoints disponiveis.
+## Este segmento reúne os EndPoints disponiveis.
 
 ### 👤 Usuários (`/api/usuarios`)
 - **GET** `/` - Lista os usuários ativos.
